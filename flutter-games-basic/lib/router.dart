@@ -15,6 +15,8 @@ import 'ui/game_saves_screen.dart';
 import 'ui/map_view.dart';
 import 'ui/scenarios_screen.dart';
 import 'ui/country_list_1836_screen.dart';
+import 'ui/game_view_screen.dart';
+import 'data/world_1836.dart';
 
 /// The router describes the game's navigational hierarchy
 final router = GoRouter(
@@ -68,6 +70,24 @@ final router = GoRouter(
               key: Key('country list 1836'),
             ),
           ),
+        ),
+        GoRoute(
+          path: 'game-view/:nationTag',
+          pageBuilder: (context, state) {
+            final nationTag = state.pathParameters['nationTag'] ?? 'FRA';
+            final nation = world1836.nations.firstWhere(
+              (n) => n.nationTag == nationTag,
+              orElse: () => world1836.playerNation,
+            );
+            return buildMyTransition<void>(
+              key: ValueKey('game-view-$nationTag'),
+              color: context.watch<Palette>().backgroundPlaySession,
+              child: GameViewScreen(
+                key: Key('game view $nationTag'),
+                nation: nation,
+              ),
+            );
+          },
         ),
       ],
     ),

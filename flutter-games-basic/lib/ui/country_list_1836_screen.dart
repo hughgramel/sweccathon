@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/nation.dart';
-import '../widgets/nation_card.dart';
+import '../models/game_types.dart';
+import '../data/world_1836.dart';
 
 /// Screen that displays the list of playable nations in the 1836 scenario
 class CountryList1836Screen extends StatelessWidget {
@@ -31,10 +31,14 @@ class CountryList1836Screen extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              itemCount: nations1836.length,
-              itemBuilder: (context, index) => NationCard(
-                nation: nations1836[index],
-              ),
+              itemCount: world1836.nations.length,
+              itemBuilder: (context, index) {
+                final nation = world1836.nations[index];
+                return _NationCard(
+                  nation: nation,
+                  onTap: () => context.go('/game-view/${nation.nationTag}'),
+                );
+              },
             ),
           ),
           // Return to Scenarios button
@@ -65,6 +69,130 @@ class CountryList1836Screen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NationCard extends StatelessWidget {
+  final Nation nation;
+  final VoidCallback onTap;
+
+  const _NationCard({
+    required this.nation,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Nation name
+            Row(
+              children: [
+                Text(
+                  nation.name,
+                  style: GoogleFonts.mPlusRounded1c(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Color(int.parse(nation.hexColor.substring(1), radix: 16) | 0xFF000000),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Statistics grid
+            Row(
+              children: [
+                _StatItem(
+                  icon: Icons.people_outline,
+                  value: '${(nation.totalPopulation / 1000000).toStringAsFixed(1)}M',
+                  label: 'Population',
+                ),
+                _StatItem(
+                  icon: Icons.factory_outlined,
+                  value: nation.totalIndustry.toString(),
+                  label: 'Industry',
+                ),
+                _StatItem(
+                  icon: Icons.monetization_on_outlined,
+                  value: nation.gold.toString(),
+                  label: 'Gold',
+                ),
+                _StatItem(
+                  icon: Icons.military_tech_outlined,
+                  value: nation.totalArmy.toString(),
+                  label: 'Army',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _StatItem({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.black54),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.mPlusRounded1c(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.mPlusRounded1c(
+              fontSize: 12,
+              color: Colors.black54,
             ),
           ),
         ],

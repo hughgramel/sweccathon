@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../style/game_button.dart';
-import '../models/save_game.dart';
+import '../models/game_types.dart';
+import '../data/world_1836.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,8 +14,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // Check if there's a recent game to determine whether to enable the Resume button
   bool hasRecentGame() {
-    final saveGames = SaveGame.getDemoSaves();
-    return saveGames.isNotEmpty;
+    return world1836.playerNation != null;
   }
 
   @override
@@ -42,12 +42,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   GameButton(
-                    text: hasRecent ? 'Resume Nation' : 'No Recent Nation',
+                    text: hasRecent ? 'Resume Nation (${world1836.playerNation.name})' : 'No Recent Nation',
                     emoji: '🏰',
                     disabled: !hasRecent,
                     onPressed: () {
                       if (hasRecent) {
-                        context.go('/game-saves');
+                        context.go('/game-view/${world1836.playerNationTag}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('No recent games found')),
