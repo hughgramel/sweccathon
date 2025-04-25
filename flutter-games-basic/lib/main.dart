@@ -39,7 +39,7 @@ void main() async {
   ]);
 
   // Initialize Google Fonts
-  GoogleFonts.config.allowRuntimeFetching = false;
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   runApp(MyApp());
 }
@@ -73,17 +73,20 @@ class MyApp extends StatelessWidget {
                 surface: palette.backgroundMain,
               ),
               textTheme: TextTheme(
-                bodyMedium: TextStyle(color: palette.ink),
+                bodyMedium: TextStyle(
+                  color: palette.ink,
+                  fontFamily: 'MPLUSRounded1c',
+                ),
               ),
               useMaterial3: true,
             ).copyWith(
               // Make buttons more fun.
               filledButtonTheme: FilledButtonThemeData(
                 style: FilledButton.styleFrom(
-                  textStyle: TextStyle(
+                  textStyle: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
-                    fontFamily: 'MPLUS Rounded 1c',
+                    fontFamily: 'MPLUSRounded1c',
                   ),
                 ),
               ),

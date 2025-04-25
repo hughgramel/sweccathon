@@ -33,7 +33,7 @@ final world1836 = Game(
   id: 'game_1836',
   gameName: '1836 Scenario',
   date: '1836-01-01',
-  mapName: 'world_states',
+  mapName: 'world_provinces',
   playerNationTag: 'FRA',
   nations: [
     Nation(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
+import '../widgets/interactive_map.dart';
+import '../widgets/resource_bar.dart';
 
 class GameViewScreen extends StatelessWidget {
   final Nation nation;
@@ -13,79 +15,72 @@ class GameViewScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(nation.name),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatCard(
-              'Overview',
-              [
-                'Total Population: ${nation.totalPopulation}',
-                'Gold: ${nation.gold}',
-                'Gold Income: ${nation.totalGoldIncome}',
-                'Research Points: ${nation.researchPoints}',
-                'Total Industry: ${nation.totalIndustry}',
-                'Total Army: ${nation.totalArmy}',
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Resources',
-              nation.resourceCounts.entries.map((e) => 
-                '${e.key.name}: ${e.value} provinces'
-              ).toList(),
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Research',
-              [
-                'Current Research: ${nation.currentResearchId ?? 'None'}',
-                'Progress: ${nation.currentResearchProgress}%',
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildStatCard(
-              'Provinces',
-              nation.provinces.map((p) => 
-                '${p.name}: Pop ${p.population}, Gold ${p.goldIncome}, Industry ${p.industry}'
-              ).toList(),
-            ),
-          ],
-        ),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Bottom layer: Grid background
+          CustomPaint(
+            size: Size.infinite,
+            painter: GridPainter(),
+          ),
+
+          // Second layer: Interactive map
+          InteractiveMap(nation: nation),
+          
+          // Top layers: UI elements
+          Column(
+            children: [
+              // Top bar with back button
+              SafeArea(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: [
+                      // Back button
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () => context.go('/scenarios'),
+                      ),
+                      Expanded(child: ResourceBar(nation: nation)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
+  }
+}
+
+// Grid painter for background
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1.0;
+
+    // Draw vertical lines
+    for (double x = 0; x < size.width; x += 50) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        paint,
+      );
+    }
+
+    // Draw horizontal lines
+    for (double y = 0; y < size.height; y += 50) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        paint,
+      );
+    }
   }
 
-  Widget _buildStatCard(String title, List<String> stats) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...stats.map((stat) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(stat),
-            )),
-          ],
-        ),
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(GridPainter oldDelegate) => false;
 } 
