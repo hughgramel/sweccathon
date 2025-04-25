@@ -34,7 +34,7 @@ class SettingsController {
 
   /// Whether or not the music is on.
   ValueNotifier<bool> musicOn = ValueNotifier(true);
-  
+
   /// Whether dark mode is enabled.
   ValueNotifier<bool> darkMode = ValueNotifier(false);
 

@@ -28,7 +28,7 @@ class _InteractiveMapState extends State<InteractiveMap> {
   
   // Zoom constraints
   final double _minScale = 0.3;
-  final double _maxScale = 20.0;
+  final double _maxScale = 35.0;
   
   // Double tap zoom
   final double _doubleTapZoomFactor = 2.0;
@@ -255,7 +255,7 @@ class MapPainter extends CustomPainter {
     final borderPaint = Paint()
       ..color = Colors.black54
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.5;
+      ..strokeWidth = 0.01;
 
     for (final path in provincePaths.values) {
       canvas.drawPath(path, provincePaint);

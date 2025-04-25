@@ -1,0 +1,2 @@
+/Users/hughgramelspacher/repos/sweccathon/flutter-games-basic/android/app/.cxx/Debug/1z171a5k/x86_64/CMakeFiles/edit_cache.dir
+/Users/hughgramelspacher/repos/sweccathon/flutter-games-basic/android/app/.cxx/Debug/1z171a5k/x86_64/CMakeFiles/rebuild_cache.dir
