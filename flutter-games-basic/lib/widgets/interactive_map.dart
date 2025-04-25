@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 import '../models/game_types.dart';
 import '../services/map_service.dart';
 import 'dart:ui' as ui;
@@ -15,30 +17,25 @@ class InteractiveMap extends StatefulWidget {
   State<InteractiveMap> createState() => _InteractiveMapState();
 }
 
-class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProviderStateMixin {
-  late TransformationController _transformationController;
-  late AnimationController _animationController;
-  Animation<Matrix4>? _animation;
-  Matrix4? _initialMatrix;
+class _InteractiveMapState extends State<InteractiveMap> {
   final MapService _mapService = MapService();
+  final TransformationController _transformationController = TransformationController();
   
-  // Store selected province
-  Province? selectedProvince;
   Map<String, Path> provincePaths = {};
-  String? _errorMessage;
+  Province? selectedProvince;
   bool _isLoading = true;
+  String? _errorMessage;
   
-  // For double tap zoom
-  Offset? _doubleTapPosition;
-
+  // Zoom constraints
+  final double _minScale = 0.3;
+  final double _maxScale = 20.0;
+  
+  // Double tap zoom
+  final double _doubleTapZoomFactor = 2.0;
+  
   @override
   void initState() {
     super.initState();
-    _transformationController = TransformationController();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
     _loadMap();
   }
 
@@ -53,77 +50,12 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       setState(() {
         provincePaths = paths;
         _isLoading = false;
-        debugPrint('Loaded ${paths.length} provinces');
       });
     } catch (e) {
       setState(() {
         _errorMessage = 'Error loading map: $e';
         _isLoading = false;
       });
-      debugPrint('Error loading map: $e');
-    }
-  }
-
-  void _handleDoubleTap() {
-    if (_doubleTapPosition == null) return;
-    
-    final currentScale = _transformationController.value.getMaxScaleOnAxis();
-    final targetScale = currentScale * 1.1; // Increase zoom by 10%
-    
-    // Get the position in the coordinate space before scaling
-    final position = _transformationController.toScene(_doubleTapPosition!);
-    
-    // Create a new matrix for the transformation
-    final matrix = Matrix4.identity()
-      ..translate(position.dx, position.dy)
-      ..scale(targetScale)
-      ..translate(-position.dx, -position.dy);
-    
-    _animateMatrix(_transformationController.value, matrix);
-  }
-
-  void _handleZoom(double scaleDelta) {
-    final currentScale = _transformationController.value.getMaxScaleOnAxis();
-    final targetScale = currentScale * scaleDelta;
-    
-    // Get the center of the screen
-    final center = Offset(
-      MediaQuery.of(context).size.width / 2,
-      MediaQuery.of(context).size.height / 2,
-    );
-    
-    // Get the position in the coordinate space before scaling
-    final position = _transformationController.toScene(center);
-    
-    // Create a new matrix for the transformation
-    final matrix = Matrix4.identity()
-      ..translate(position.dx, position.dy)
-      ..scale(targetScale)
-      ..translate(-position.dx, -position.dy);
-    
-    _animateMatrix(_transformationController.value, matrix);
-  }
-
-  void _animateMatrix(Matrix4 from, Matrix4 to) {
-    _animation?.removeListener(_onAnimate);
-    _animation = Matrix4Tween(
-      begin: from,
-      end: to,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    _animation!.addListener(_onAnimate);
-    _animationController.forward(from: 0);
-  }
-
-  void _onAnimate() {
-    if (_animation == null) return;
-    _transformationController.value = _animation!.value;
-    if (!_animationController.isAnimating) {
-      _animation?.removeListener(_onAnimate);
-      _animation = null;
-      _initialMatrix = null;
     }
   }
 
@@ -149,47 +81,44 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       );
     }
 
-    if (provincePaths.isEmpty) {
-      return const Center(
-        child: Text(
-          'No provinces loaded',
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
-
     return Stack(
       children: [
-        ClipRect(
+        // The InteractiveViewer handles zoom and pan
+        InteractiveViewer(
+          transformationController: _transformationController,
+          minScale: _minScale,
+          maxScale: _maxScale,
+          boundaryMargin: const EdgeInsets.all(double.infinity),
+          onInteractionEnd: (details) {
+            // Add custom behavior after interactions if needed
+          },
+          // Enable constrained and scalable interactions
+          constrained: false,
+          scaleEnabled: true,
+          // Add double tap to zoom behavior
           child: GestureDetector(
-            onDoubleTapDown: (details) {
-              _doubleTapPosition = details.localPosition;
+            onDoubleTap: () {
+              _zoom(_doubleTapZoomFactor);
             },
-            onDoubleTap: _handleDoubleTap,
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              minScale: 0.5,
-              maxScale: 10.0,
-              boundaryMargin: const EdgeInsets.all(double.infinity),
-              panEnabled: true,
-              scaleEnabled: true,
-              onInteractionStart: _onInteractionStart,
-              onInteractionEnd: _onInteractionEnd,
-              child: CustomPaint(
-                size: Size(
-                  MediaQuery.of(context).size.width,
-                  MediaQuery.of(context).size.height,
-                ),
-                painter: MapPainter(
-                  nation: widget.nation,
-                  selectedProvince: selectedProvince,
-                  provincePaths: provincePaths,
+            child: Center(
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 3, // Make the canvas larger for more zoom space
+                height: MediaQuery.of(context).size.height * 3,
+                child: CustomPaint(
+                  painter: MapPainter(
+                    nation: widget.nation,
+                    selectedProvince: selectedProvince,
+                    provincePaths: provincePaths,
+                  ),
+                  // Make the entire canvas tappable
+                  child: ColoredBox(color: Colors.transparent),
                 ),
               ),
             ),
           ),
         ),
-        // Zoom controls
+        
+        // Zoom buttons
         Positioned(
           right: 16,
           bottom: 16,
@@ -197,14 +126,16 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
             mainAxisSize: MainAxisSize.min,
             children: [
               FloatingActionButton(
+                heroTag: 'zoom_in',
                 mini: true,
-                onPressed: () => _handleZoom(1.1),
+                onPressed: () => _zoomIn(),
                 child: const Icon(Icons.add),
               ),
               const SizedBox(height: 8),
               FloatingActionButton(
+                heroTag: 'zoom_out',
                 mini: true,
-                onPressed: () => _handleZoom(0.9),
+                onPressed: () => _zoomOut(),
                 child: const Icon(Icons.remove),
               ),
             ],
@@ -214,39 +145,55 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     );
   }
 
-  void _onInteractionStart(ScaleStartDetails details) {
-    _initialMatrix = _transformationController.value;
-    _animation?.removeListener(_onAnimate);
-    _animationController.stop();
+  void _zoomIn() {
+    _zoom(2.0); // Scale up by 100% (double)
   }
 
-  void _onInteractionEnd(ScaleEndDetails details) {
-    // Reset zoom if too far out
-    final scale = _transformationController.value.getMaxScaleOnAxis();
-    if (scale < 0.5) {
-      final resetMatrix = Matrix4.identity();
-      _animateMatrix(_transformationController.value, resetMatrix);
-    }
+  void _zoomOut() {
+    _zoom(0.5); // Scale down by 50% (half)
   }
 
-  void _onTapDown(TapDownDetails details) {
-    final mapPoint = _transformationController.toScene(details.localPosition);
+  void _zoom(double scaleFactor) {
+    // Get the current scale
+    final currentScale = _transformationController.value.getMaxScaleOnAxis();
     
-    // Check which province was tapped
-    for (final province in widget.nation.provinces) {
-      if (_mapService.isPointInProvince(mapPoint, province.id)) {
-        setState(() {
-          selectedProvince = province;
-        });
-        break;
-      }
-    }
+    // Calculate new scale, respecting min/max constraints
+    final newScale = (currentScale * scaleFactor).clamp(_minScale, _maxScale);
+    
+    // Calculate scaling factor from current to new scale
+    final effectiveScaleFactor = newScale / currentScale;
+    
+    // Get the center of the screen
+    final size = MediaQuery.of(context).size;
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+    
+    // Clone current matrix to avoid direct modification
+    final Matrix4 matrix = Matrix4.copy(_transformationController.value);
+    
+    // Apply zoom transformation centered on the screen center
+    final translation = matrix.getTranslation();
+    final translationVector = Vector3(translation.x, translation.y, 0);
+    
+    // Calculate center point in the original coordinate space
+    final centerPoint = Vector3(
+      centerX - translationVector.x, 
+      centerY - translationVector.y,
+      0,
+    ) / currentScale;
+    
+    // Create new matrix with the zoom centered on the screen center
+    final newMatrix = Matrix4.identity()
+      ..translate(centerX - centerPoint.x * newScale, centerY - centerPoint.y * newScale)
+      ..scale(newScale);
+    
+    // Apply the new transformation
+    _transformationController.value = newMatrix;
   }
 
   @override
   void dispose() {
     _transformationController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 }
@@ -266,35 +213,39 @@ class MapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (provincePaths.isEmpty) return;
 
-    // Calculate bounds of ALL paths
+    // Calculate bounds of all paths
     Rect fullBounds = provincePaths.values.first.getBounds();
     for (final path in provincePaths.values.skip(1)) {
       fullBounds = fullBounds.expandToInclude(path.getBounds());
     }
 
-    // Calculate scale to fit everything
+    // Calculate scale to fit the paths within the canvas
     final scaleX = size.width / fullBounds.width;
     final scaleY = size.height / fullBounds.height;
     final scale = scaleX < scaleY ? scaleX : scaleY;
-    final scaledScale = scale * 0.8; // Leave more margin for zooming
+    
+    // Scale factor to leave margins
+    final scaleFactor = scale * 0.8;
 
-    // Center the entire map
     canvas.save();
     
-    // Calculate translation to center the map
-    final scaledWidth = fullBounds.width * scaledScale;
-    final scaledHeight = fullBounds.height * scaledScale;
-    final dx = (size.width - scaledWidth) / 2 - fullBounds.left * scaledScale;
-    final dy = (size.height - scaledHeight) / 2 - fullBounds.top * scaledScale;
+    // Center the map on the canvas
+    final dx = (size.width - (fullBounds.width * scaleFactor)) / 2 - fullBounds.left * scaleFactor;
+    final dy = (size.height - (fullBounds.height * scaleFactor)) / 2 - fullBounds.top * scaleFactor;
     
     canvas.translate(dx, dy);
-    canvas.scale(scaledScale);
+    canvas.scale(scaleFactor);
 
     // Draw background
     final backgroundPaint = Paint()
       ..color = const Color(0xFFADD8E6) // Light blue for water
       ..style = PaintingStyle.fill;
-    canvas.drawRect(fullBounds, backgroundPaint);
+    
+    // Draw background with padding
+    canvas.drawRect(
+      fullBounds.inflate(fullBounds.width * 0.1), 
+      backgroundPaint
+    );
 
     // Draw provinces
     final provincePaint = Paint()
@@ -304,8 +255,7 @@ class MapPainter extends CustomPainter {
     final borderPaint = Paint()
       ..color = Colors.black54
       ..style = PaintingStyle.stroke
-      // Keep this very low
-      ..strokeWidth = 0.1;
+      ..strokeWidth = 0.5;
 
     for (final path in provincePaths.values) {
       canvas.drawPath(path, provincePaint);
