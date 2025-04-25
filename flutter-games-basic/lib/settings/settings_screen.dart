@@ -58,6 +58,24 @@ class SettingsScreen extends StatelessWidget {
                 onSelected: settings.toggleMusicOn,
               ),
             ),
+            ValueListenableBuilder<bool>(
+              valueListenable: settings.darkMode,
+              builder: (context, darkMode, child) => _SettingsLine(
+                'Dark Mode',
+                Icon(darkMode ? Icons.dark_mode : Icons.light_mode),
+                onSelected: () {
+                  settings.toggleDarkMode();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        darkMode 
+                            ? 'Dark mode disabled (visual changes not implemented)'
+                            : 'Dark mode enabled (visual changes not implemented)'),
+                    ),
+                  );
+                },
+              ),
+            ),
             _SettingsLine(
               'Reset progress',
               const Icon(Icons.delete),
@@ -111,7 +129,7 @@ class _NameChangeLine extends StatelessWidget {
             ValueListenableBuilder(
               valueListenable: settings.playerName,
               builder: (context, name, child) => Text(
-                '‘$name’',
+                "'$name'",
                 style: const TextStyle(
                   fontFamily: 'Permanent Marker',
                   fontSize: 30,

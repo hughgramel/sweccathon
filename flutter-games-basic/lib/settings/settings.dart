@@ -34,6 +34,9 @@ class SettingsController {
 
   /// Whether or not the music is on.
   ValueNotifier<bool> musicOn = ValueNotifier(true);
+  
+  /// Whether dark mode is enabled.
+  ValueNotifier<bool> darkMode = ValueNotifier(false);
 
   /// Creates a new instance of [SettingsController] backed by [store].
   ///
@@ -64,6 +67,11 @@ class SettingsController {
     soundsOn.value = !soundsOn.value;
     _store.saveSoundsOn(soundsOn.value);
   }
+  
+  void toggleDarkMode() {
+    darkMode.value = !darkMode.value;
+    _store.saveDarkMode(darkMode.value);
+  }
 
   /// Asynchronously loads values from the injected persistence store.
   Future<void> _loadStateFromPersistence() async {
@@ -84,6 +92,9 @@ class SettingsController {
           .getMusicOn(defaultValue: true)
           .then((value) => musicOn.value = value),
       _store.getPlayerName().then((value) => playerName.value = value),
+      _store
+          .getDarkMode(defaultValue: false)
+          .then((value) => darkMode.value = value),
     ]);
 
     _log.fine(() => 'Loaded settings: $loadedValues');

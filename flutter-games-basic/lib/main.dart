@@ -9,9 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_lifecycle/app_lifecycle.dart';
-import 'audio/audio_controller.dart';
 import 'player_progress/player_progress.dart';
 import 'router.dart';
 import 'settings/settings.dart';
@@ -38,6 +38,9 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  // Initialize Google Fonts
+  GoogleFonts.config.allowRuntimeFetching = false;
+
   runApp(MyApp());
 }
 
@@ -58,24 +61,12 @@ class MyApp extends StatelessWidget {
           Provider(create: (context) => SettingsController()),
           Provider(create: (context) => Palette()),
           ChangeNotifierProvider(create: (context) => PlayerProgress()),
-          // Set up audio.
-          ProxyProvider2<AppLifecycleStateNotifier, SettingsController,
-              AudioController>(
-            create: (context) => AudioController(),
-            update: (context, lifecycleNotifier, settings, audio) {
-              audio!.attachDependencies(lifecycleNotifier, settings);
-              return audio;
-            },
-            dispose: (context, audio) => audio.dispose(),
-            // Ensures that music starts immediately.
-            lazy: false,
-          ),
         ],
         child: Builder(builder: (context) {
           final palette = context.watch<Palette>();
 
           return MaterialApp.router(
-            title: 'My Flutter Game',
+            title: 'Flutter Game',
             theme: ThemeData.from(
               colorScheme: ColorScheme.fromSeed(
                 seedColor: palette.darkPen,
@@ -92,6 +83,7 @@ class MyApp extends StatelessWidget {
                   textStyle: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
+                    fontFamily: 'MPLUS Rounded 1c',
                   ),
                 ),
               ),

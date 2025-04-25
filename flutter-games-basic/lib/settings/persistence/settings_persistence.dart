@@ -14,6 +14,8 @@ abstract class SettingsPersistence {
   Future<String> getPlayerName();
 
   Future<bool> getSoundsOn({required bool defaultValue});
+  
+  Future<bool> getDarkMode({required bool defaultValue});
 
   Future<void> saveAudioOn(bool value);
 
@@ -22,4 +24,6 @@ abstract class SettingsPersistence {
   Future<void> savePlayerName(String value);
 
   Future<void> saveSoundsOn(bool value);
+  
+  Future<void> saveDarkMode(bool value);
 }

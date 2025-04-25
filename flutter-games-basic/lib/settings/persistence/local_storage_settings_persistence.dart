@@ -37,6 +37,12 @@ class LocalStorageSettingsPersistence extends SettingsPersistence {
   }
 
   @override
+  Future<bool> getDarkMode({required bool defaultValue}) async {
+    final prefs = await instanceFuture;
+    return prefs.getBool('darkMode') ?? defaultValue;
+  }
+
+  @override
   Future<void> saveAudioOn(bool value) async {
     final prefs = await instanceFuture;
     await prefs.setBool('audioOn', value);
@@ -58,5 +64,11 @@ class LocalStorageSettingsPersistence extends SettingsPersistence {
   Future<void> saveSoundsOn(bool value) async {
     final prefs = await instanceFuture;
     await prefs.setBool('soundsOn', value);
+  }
+
+  @override
+  Future<void> saveDarkMode(bool value) async {
+    final prefs = await instanceFuture;
+    await prefs.setBool('darkMode', value);
   }
 }
