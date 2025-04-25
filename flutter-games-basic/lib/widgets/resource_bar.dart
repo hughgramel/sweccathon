@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../models/game_types.dart';
+import 'dart:math';
 
 class ResourceBar extends StatelessWidget {
   final Nation nation;
@@ -10,80 +11,159 @@ class ResourceBar extends StatelessWidget {
     required this.nation,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          color: Colors.white.withOpacity(0.2),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _ResourceItem(
-                icon: Icons.monetization_on,
-                value: nation.gold.toString(),
-                label: 'Gold',
-              ),
-              _ResourceItem(
-                icon: Icons.attach_money,
-                value: '${nation.totalGoldIncome}/month',
-                label: 'Income',
-              ),
-              _ResourceItem(
-                icon: Icons.factory,
-                value: nation.totalIndustry.toString(),
-                label: 'Industry',
-              ),
-              _ResourceItem(
-                icon: Icons.science,
-                value: nation.researchPoints.toString(),
-                label: 'Research',
-              ),
-              _ResourceItem(
-                icon: Icons.military_tech,
-                value: nation.totalArmy.toString(),
-                label: 'Army',
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _formatNumber(num value) {
+    if (value >= 1000000) {
+      // Convert to millions with 3 significant digits
+      return '${(value / 1000000).toPrecision(3)}M';
+    } else if (value >= 1000) {
+      // Convert to thousands with 3 significant digits
+      return '${(value / 1000).toPrecision(3)}K';
+    }
+    return value.toPrecision(3).toString();
   }
-}
-
-class _ResourceItem extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-
-  const _ResourceItem({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.white),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
+        // Resource bar
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                offset: const Offset(0, 2),
+                blurRadius: 3,
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ResourceItem(
+                  emoji: '💰',
+                  value: '2.00',
+                  suffix: 'K',
+                ),
+                _ResourceItem(
+                  emoji: '👥',
+                  value: '35.1',
+                  suffix: 'M',
+                ),
+                _ResourceItem(
+                  emoji: '🏭',
+                  value: '2.05',
+                  suffix: 'K',
+                ),
+                _ResourceItem(
+                  emoji: '⚔️',
+                  value: '270',
+                  suffix: 'K',
+                ),
+              ],
+            ),
           ),
         ),
+        // Flag and date row
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 8),
+          child: Row(
+            children: [
+              // Flag
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 2),
+                      blurRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/flags/${nation.nationTag.toLowerCase()}.png',
+                      width: 40,
+                      height: 30,
+                      fit: BoxFit.contain,
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                        ],
+                      ),
+                      child: const Text(
+                        'Jan 1, 1836',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+extension NumPrecision on num {
+  double toPrecision(int precision) {
+    if (this == 0) return 0;
+    final String str = this.toString();
+    final List<String> parts = str.split('.');
+    if (parts.length == 1) return this.toDouble();
+    
+    final String digitsStr = parts.join('');
+    final int nonZeroIndex = digitsStr.indexOf(RegExp(r'[1-9]'));
+    final String significantDigits = digitsStr.substring(nonZeroIndex, nonZeroIndex + precision);
+    final double result = double.parse(significantDigits) * pow(10, nonZeroIndex - significantDigits.length + 1);
+    return result;
+  }
+}
+
+class _ResourceItem extends StatelessWidget {
+  final String emoji;
+  final String value;
+  final String suffix;
+
+  const _ResourceItem({
+    required this.emoji,
+    required this.value,
+    required this.suffix,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 6),
         Text(
-          label,
+          '$value$suffix',
           style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
+            color: Colors.black87,
+            fontWeight: FontWeight.w500,
+            fontSize: 17,
           ),
         ),
       ],

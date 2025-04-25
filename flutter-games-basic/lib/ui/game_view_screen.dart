@@ -12,6 +12,38 @@ class GameViewScreen extends StatelessWidget {
     required this.nation,
   });
 
+  void _showMenuModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.home),
+                title: const Text('Return Home'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/scenarios');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.go('/settings');
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,26 +62,22 @@ class GameViewScreen extends StatelessWidget {
           // Top layers: UI elements
           Column(
             children: [
-              // Top bar with back button
+              // Top bar with resource bar
               SafeArea(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      // Back button
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => context.go('/scenarios'),
-                      ),
-                      Expanded(child: ResourceBar(nation: nation)),
-                    ],
-                  ),
-                ),
+                child: ResourceBar(nation: nation),
               ),
             ],
           ),
         ],
       ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(left: 16),
+        child: FloatingActionButton(
+          onPressed: () => _showMenuModal(context),
+          child: const Icon(Icons.menu),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 }

@@ -38,6 +38,7 @@ flutter:
     - assets/images/
     - assets/world_provinces.svg
     - assets/fonts/
+    - assets/flags/
 
   fonts:
     - family: MPLUSRounded1c
