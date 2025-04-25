@@ -65,15 +65,13 @@ class ScenariosScreen extends StatelessWidget {
                     },
                   ),
                   
-                  // Darkened overlay
+                  // Darkened overlay with reduced opacity
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withOpacity(0.4),
-                          Colors.black.withOpacity(0.7),
                         ],
                       ),
                     ),
