@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// A customized button widget for the game's main menu
 class GameButton extends StatefulWidget {
@@ -65,8 +66,8 @@ class _GameButtonState extends State<GameButton> {
           _isPressed ? 0 : -2.0,
           0,
         ),
-        margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+        margin: const EdgeInsets.symmetric(vertical: 6.0),
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 20.0),
         decoration: BoxDecoration(
           color: widget.backgroundColor,
           borderRadius: BorderRadius.circular(12.0),
@@ -91,16 +92,15 @@ class _GameButtonState extends State<GameButton> {
             children: [
               Text(
                 widget.emoji,
-                style: const TextStyle(fontSize: 24),
+                style: const TextStyle(fontSize: 22),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 widget.text,
-                style: TextStyle(
-                  fontSize: 24,
+                style: GoogleFonts.mPlusRounded1c(
+                  fontSize: 20,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
-                  fontFamily: 'MPLUS Rounded 1c',
                 ),
               ),
             ],

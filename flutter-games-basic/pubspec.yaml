@@ -37,19 +37,6 @@ flutter:
     - assets/music/
     - assets/sfx/
 
-  fonts:
-    - family: Permanent Marker
-      fonts:
-        - asset: assets/fonts/Permanent_Marker/PermanentMarker-Regular.ttf
-    - family: MPLUS Rounded 1c
-      fonts:
-        - asset: assets/fonts/MPLUS_Rounded_1c/MPLUSRounded1c-Regular.ttf
-          weight: 400
-        - asset: assets/fonts/MPLUS_Rounded_1c/MPLUSRounded1c-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/MPLUS_Rounded_1c/MPLUSRounded1c-Bold.ttf
-          weight: 700
-
 flutter_launcher_icons:
   android: true
   ios: true
