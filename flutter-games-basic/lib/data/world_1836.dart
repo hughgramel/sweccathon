@@ -28,6 +28,10 @@ const nationTagToName = {
 
 String getNationName(String tag) => nationTagToName[tag] ?? tag;
 
+
+
+
+
 // Example save game for 1836 scenario
 final world1836 = Game(
   id: 'game_1836',

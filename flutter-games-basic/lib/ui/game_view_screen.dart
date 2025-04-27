@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
-import '../widgets/interactive_map.dart';
+// import '../widgets/interactive_map.dart';
 import '../widgets/resource_bar.dart';
 
 class GameViewScreen extends StatelessWidget {
-  final Nation nation;
+  final Game game;
 
   const GameViewScreen({
     super.key,
-    required this.nation,
+    required this.game,
   });
+
+
 
   void _showMenuModal(BuildContext context) {
     showModalBottomSheet(
@@ -59,14 +61,14 @@ class GameViewScreen extends StatelessWidget {
           ),
 
           // Second layer: Interactive map
-          InteractiveMap(nation: nation),
-          
+          // InteractiveMap(nation: nation),
+          Placeholder(),
           // Top layers: UI elements
           Column(
             children: [
               // Top bar with resource bar
               SafeArea(
-                child: ResourceBar(nation: nation),
+                child: ResourceBar(nation: game.playerNation),
               ),
             ],
           ),

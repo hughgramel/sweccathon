@@ -47,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     disabled: !hasRecent,
                     onPressed: () {
                       if (hasRecent) {
+                        print('Resuming game for ${world1836.playerNationTag}');
                         context.go('/game-view/${world1836.playerNationTag}');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(

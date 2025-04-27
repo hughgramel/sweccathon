@@ -13,6 +13,18 @@ class GamePersistenceService {
   factory GamePersistenceService() => _instance;
   GamePersistenceService._internal();
 
+
+
+
+
+
+
+  Nation getNationFromTagAndGame(String tag, Game game) {
+    return game.nations.firstWhere((nation) => nation.nationTag == tag);
+  }
+
+
+
   /// Saves the current game state
   /// 
   /// This will save both to the current game slot and to the list of saved games

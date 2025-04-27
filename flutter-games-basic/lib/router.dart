@@ -11,7 +11,7 @@ import 'style/my_transition.dart';
 import 'style/palette.dart';
 import 'ui/home_screen.dart';
 import 'ui/game_saves_screen.dart';
-import 'ui/map_view.dart';
+// import 'ui/map_view.dart';
 import 'ui/scenarios_screen.dart';
 import 'ui/country_list_1836_screen.dart';
 import 'ui/game_view_screen.dart';
@@ -34,17 +34,17 @@ final router = GoRouter(
             ),
           ),
         ),
-        GoRoute(
-          path: 'map-view',
-          pageBuilder: (context, state) => buildMyTransition<void>(
-            key: const ValueKey('map-view'),
-            color: context.watch<Palette>().backgroundPlaySession,
-            child: MapView(
-              key: const Key('map view'),
-              saveData: state.uri.queryParameters['saveData'],
-            ),
-          ),
-        ),
+        // GoRoute(
+        //   path: 'map-view',
+        //   pageBuilder: (context, state) => buildMyTransition<void>(
+        //     key: const ValueKey('map-view'),
+        //     color: context.watch<Palette>().backgroundPlaySession,
+        //     child: MapView(
+        //       key: const Key('map view'),
+        //       saveData: state.uri.queryParameters['saveData'],
+        //     ),
+        //   ),
+        // ),
         GoRoute(
           path: 'scenarios',
           pageBuilder: (context, state) => buildMyTransition<void>(
@@ -78,7 +78,7 @@ final router = GoRouter(
               color: context.watch<Palette>().backgroundPlaySession,
               child: GameViewScreen(
                 key: Key('game view $nationTag'),
-                nation: nation,
+                game: world1836,
               ),
             );
           },

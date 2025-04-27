@@ -11,20 +11,64 @@ class ResourceBar extends StatelessWidget {
     required this.nation,
   });
 
-  String _formatNumber(num value) {
-    // First convert to 3 significant digits
-    final preciseValue = value.toPrecision(3);
-    
-    if (preciseValue >= 1000000) {
-      return '${(preciseValue / 1000000).toPrecision(3)}M';
-    } else if (preciseValue >= 1000) {
-      return '${(preciseValue / 1000).toPrecision(3)}K';
-    }
-    return preciseValue.toString();
+  String _formatNumber(num number) {
+    // Handle special cases
+  if (number == 0) return "0";
+  
+  // Handle negative numbers
+  bool isNegative = number < 0;
+  number = number.abs();
+  
+  // Define suffixes
+  final suffixes = ["", "k", "m", "b", "t"];
+  
+  // Determine the appropriate suffix
+  int suffixIndex = 0;
+  while (number >= 1000 && suffixIndex < suffixes.length - 1) {
+    number /= 1000;
+    suffixIndex++;
   }
+  
+  // Format to 3 significant digits
+  String formatted;
+  if (number >= 100) {
+    // 100-999: no decimal places needed
+    formatted = number.round().toString();
+  } else if (number >= 10) {
+    // 10-99: 1 decimal place
+    formatted = number.toStringAsFixed(1);
+    // Remove trailing zeros
+    if (formatted.endsWith('.0')) {
+      formatted = formatted.substring(0, formatted.length - 2);
+    }
+  } else {
+    // 0-9: 2 decimal places
+    formatted = number.toStringAsFixed(2);
+    // Remove trailing zeros
+    if (formatted.endsWith('0')) {
+      formatted = formatted.substring(0, formatted.length - 1);
+      if (formatted.endsWith('.0')) {
+        formatted = formatted.substring(0, formatted.length - 2);
+      }
+    }
+  }
+  
+  // Add suffix and handle negative sign
+  return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
+}
+
 
   @override
   Widget build(BuildContext context) {
+    print('ResourceBar build');
+    print('Nation: ${nation.name}');
+    print('Gold: ${nation.totalGoldIncome}');
+    print('Population: ${nation.totalPopulation}');
+    print('Industry: ${nation.totalIndustry}');
+    print('Army: ${nation.totalArmy}');
+
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -126,20 +170,6 @@ class ResourceBar extends StatelessWidget {
   }
 }
 
-extension NumPrecision on num {
-  double toPrecision(int precision) {
-    if (this == 0) return 0;
-    final String str = this.toString();
-    final List<String> parts = str.split('.');
-    if (parts.length == 1) return this.toDouble();
-    
-    final String digitsStr = parts.join('');
-    final int nonZeroIndex = digitsStr.indexOf(RegExp(r'[1-9]'));
-    final String significantDigits = digitsStr.substring(nonZeroIndex, nonZeroIndex + precision);
-    final double result = double.parse(significantDigits) * pow(10, nonZeroIndex - significantDigits.length + 1);
-    return result;
-  }
-}
 
 class _ResourceItem extends StatelessWidget {
   final String emoji;
