@@ -12,14 +12,15 @@ class ResourceBar extends StatelessWidget {
   });
 
   String _formatNumber(num value) {
-    if (value >= 1000000) {
-      // Convert to millions with 3 significant digits
-      return '${(value / 1000000).toPrecision(3)}M';
-    } else if (value >= 1000) {
-      // Convert to thousands with 3 significant digits
-      return '${(value / 1000).toPrecision(3)}K';
+    // First convert to 3 significant digits
+    final preciseValue = value.toPrecision(3);
+    
+    if (preciseValue >= 1000000) {
+      return '${(preciseValue / 1000000).toPrecision(3)}M';
+    } else if (preciseValue >= 1000) {
+      return '${(preciseValue / 1000).toPrecision(3)}K';
     }
-    return value.toPrecision(3).toString();
+    return preciseValue.toString();
   }
 
   @override
@@ -30,7 +31,7 @@ class ResourceBar extends StatelessWidget {
         // Resource bar
         Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          decoration: BoxDecoration(
+          decoration: BoxDecoration( 
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
@@ -48,23 +49,23 @@ class ResourceBar extends StatelessWidget {
               children: [
                 _ResourceItem(
                   emoji: '💰',
-                  value: '2.00',
-                  suffix: 'K',
+                  value: _formatNumber(nation.totalGoldIncome),
+                  suffix: '',
                 ),
                 _ResourceItem(
                   emoji: '👥',
-                  value: '35.1',
-                  suffix: 'M',
+                  value: _formatNumber(nation.totalPopulation),
+                  suffix: '',
                 ),
                 _ResourceItem(
                   emoji: '🏭',
-                  value: '2.05',
-                  suffix: 'K',
+                  value: _formatNumber(nation.totalIndustry),
+                  suffix: '',
                 ),
                 _ResourceItem(
                   emoji: '⚔️',
-                  value: '270',
-                  suffix: 'K',
+                  value: _formatNumber(nation.totalArmy),
+                  suffix: '',
                 ),
               ],
             ),

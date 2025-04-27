@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   GameButton(
-                    text: hasRecent ? 'Resume Nation (${world1836.playerNation.name})' : 'No Recent Nation',
+                    text: hasRecent ? 'Resume Game (${world1836.playerNation.name})' : 'No Recent Nation',
                     emoji: '🏰',
                     disabled: !hasRecent,
                     onPressed: () {
@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                   GameButton(
-                    text: 'New Nation',
+                    text: 'New Game',
                     emoji: '⚔️',
                     onPressed: () => context.go('/scenarios'),
                   ),

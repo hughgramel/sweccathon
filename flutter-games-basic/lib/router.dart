@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'settings/settings_screen.dart';
 import 'style/my_transition.dart';
 import 'style/palette.dart';
 import 'ui/home_screen.dart';
@@ -45,11 +44,6 @@ final router = GoRouter(
               saveData: state.uri.queryParameters['saveData'],
             ),
           ),
-        ),
-        GoRoute(
-          path: 'settings',
-          builder: (context, state) =>
-              const SettingsScreen(key: Key('settings')),
         ),
         GoRoute(
           path: 'scenarios',

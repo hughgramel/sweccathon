@@ -35,7 +35,7 @@ class NationCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                nation.flag,
+                nation.color,
                 style: const TextStyle(fontSize: 24),
               ),
               const SizedBox(width: 8),

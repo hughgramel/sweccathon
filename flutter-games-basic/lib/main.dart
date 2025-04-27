@@ -14,7 +14,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_lifecycle/app_lifecycle.dart';
 import 'player_progress/player_progress.dart';
 import 'router.dart';
-import 'settings/settings.dart';
 import 'style/palette.dart';
 
 void main() async {
@@ -58,7 +57,6 @@ class MyApp extends StatelessWidget {
         // `context.watch()` or `context.read()`.
         // See `lib/main_menu/main_menu_screen.dart` for example usage.
         providers: [
-          Provider(create: (context) => SettingsController()),
           Provider(create: (context) => Palette()),
           ChangeNotifierProvider(create: (context) => PlayerProgress()),
         ],
