@@ -62,17 +62,43 @@ class _InteractiveMapState extends State<InteractiveMap> {
 
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      boundaryMargin: EdgeInsets.all(8.0),
-      minScale: 0.1,
-      maxScale: 20.0,
-      child: Stack(
-        children: [
-         for (final region in regions)...{
-          _getRegionImage(region, selectedRegion == region ? Colors.green : Colors.grey),
-          _getRegionBorder(region),
-         }
-        ],
+    final size = MediaQuery.of(context).size;
+    return Center(
+      child: InteractiveViewer(
+        boundaryMargin: EdgeInsets.all(8.0),
+        minScale: 0.1,
+        maxScale: 20.0,
+        constrained: false,
+        child: Column(
+          children: [
+            // Large box to be above the map
+            Container(
+              width: 1200,
+              height: 200,
+              color: Colors.brown,
+            ),
+            SizedBox(
+              width: 1200,
+              height: 480,
+              child: Container(
+                color: const Color.fromARGB(255, 209, 229, 240),
+                child: Stack(
+                  children: [
+                    for (final region in regions)...{
+                      _getRegionImage(region, selectedRegion == region ? Colors.green : Colors.grey),
+                      _getRegionBorder(region),
+                    }
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              width: 1200,
+              height: 200,
+              color: Colors.brown,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -132,7 +158,7 @@ class RegionBorderPainter extends CustomPainter {
   RegionBorderPainter({super.repaint, required this.path}) {
     borderPaint = Paint()
       ..color = Colors.black
-      ..strokeWidth = 0.1
+      ..strokeWidth = 0.05
       ..style = PaintingStyle.stroke;
   }
 
