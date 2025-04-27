@@ -7,23 +7,16 @@ import '../data/world_1836.dart';
 class GamePersistenceService {
   static const String _currentGameKey = 'current_game';
   static const String _savedGamesKey = 'saved_games';
+  static const int maxSaveSlots = 5;
   
   /// Singleton instance
   static final GamePersistenceService _instance = GamePersistenceService._internal();
   factory GamePersistenceService() => _instance;
   GamePersistenceService._internal();
 
-
-
-
-
-
-
   Nation getNationFromTagAndGame(String tag, Game game) {
     return game.nations.firstWhere((nation) => nation.nationTag == tag);
   }
-
-
 
   /// Saves the current game state
   /// 
@@ -232,5 +225,72 @@ class GamePersistenceService {
       timeStart: (json['timeStart'] as num).toInt(),
       timeFinish: (json['timeFinish'] as num).toInt(),
     );
+  }
+
+  /// Saves the game to a specific slot
+  Future<void> saveGameToSlot(Game game, int slotNumber) async {
+    if (slotNumber < 0 || slotNumber >= maxSaveSlots) {
+      throw Exception('Invalid save slot number');
+    }
+    
+    final prefs = await SharedPreferences.getInstance();
+    final gameJson = _gameToJson(game);
+    
+    // Save to specific slot
+    await prefs.setString('save_slot_$slotNumber', jsonEncode(gameJson));
+  }
+
+  /// Loads a game from a specific slot
+  Future<Game?> loadGameFromSlot(int slotNumber) async {
+    if (slotNumber < 0 || slotNumber >= maxSaveSlots) {
+      throw Exception('Invalid save slot number');
+    }
+    
+    final prefs = await SharedPreferences.getInstance();
+    final gameJson = prefs.getString('save_slot_$slotNumber');
+    
+    if (gameJson != null) {
+      try {
+        final decodedJson = jsonDecode(gameJson) as Map<String, dynamic>;
+        return _gameFromJson(decodedJson);
+      } catch (e) {
+        print('Error loading saved game from slot $slotNumber: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /// Gets all save slots with their games
+  Future<List<Game?>> getAllSaveSlots() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<Game?> slots = [];
+    
+    for (int i = 0; i < maxSaveSlots; i++) {
+      final gameJson = prefs.getString('save_slot_$i');
+      if (gameJson != null) {
+        try {
+          final decodedJson = jsonDecode(gameJson) as Map<String, dynamic>;
+          slots.add(_gameFromJson(decodedJson));
+        } catch (e) {
+          print('Error loading saved game from slot $i: $e');
+          slots.add(null);
+        }
+      } else {
+        slots.add(null);
+      }
+    }
+    
+    return slots;
+  }
+
+  /// Clears a specific save slot
+  Future<void> clearSaveSlot(int slotNumber) async {
+    if (slotNumber < 0 || slotNumber >= maxSaveSlots) {
+      throw Exception('Invalid save slot number');
+    }
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('save_slot_$slotNumber');
   }
 } 

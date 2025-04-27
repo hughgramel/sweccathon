@@ -12,67 +12,54 @@ class ResourceBar extends StatelessWidget {
   });
 
   String _formatNumber(num number) {
-    // Handle special cases
-  if (number == 0) return "0";
-  
-  // Handle negative numbers
-  bool isNegative = number < 0;
-  number = number.abs();
-  
-  // Define suffixes
-  final suffixes = ["", "k", "m", "b", "t"];
-  
-  // Determine the appropriate suffix
-  int suffixIndex = 0;
-  while (number >= 1000 && suffixIndex < suffixes.length - 1) {
-    number /= 1000;
-    suffixIndex++;
-  }
-  
-  // Format to 3 significant digits
-  String formatted;
-  if (number >= 100) {
-    // 100-999: no decimal places needed
-    formatted = number.round().toString();
-  } else if (number >= 10) {
-    // 10-99: 1 decimal place
-    formatted = number.toStringAsFixed(1);
-    // Remove trailing zeros
-    if (formatted.endsWith('.0')) {
-      formatted = formatted.substring(0, formatted.length - 2);
+    if (number == 0) return "0";
+    
+    bool isNegative = number < 0;
+    number = number.abs();
+    
+    final suffixes = ["", "k", "m", "b", "t"];
+    
+    int suffixIndex = 0;
+    while (number >= 1000 && suffixIndex < suffixes.length - 1) {
+      number /= 1000;
+      suffixIndex++;
     }
-  } else {
-    // 0-9: 2 decimal places
-    formatted = number.toStringAsFixed(2);
-    // Remove trailing zeros
-    if (formatted.endsWith('0')) {
-      formatted = formatted.substring(0, formatted.length - 1);
+    
+    String formatted;
+    if (number >= 100) {
+      formatted = number.round().toString();
+    } else if (number >= 10) {
+      formatted = number.toStringAsFixed(1);
       if (formatted.endsWith('.0')) {
         formatted = formatted.substring(0, formatted.length - 2);
       }
+    } else {
+      formatted = number.toStringAsFixed(2);
+      if (formatted.endsWith('0')) {
+        formatted = formatted.substring(0, formatted.length - 1);
+        if (formatted.endsWith('.0')) {
+          formatted = formatted.substring(0, formatted.length - 2);
+        }
+      }
     }
+    
+    return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
   }
-  
-  // Add suffix and handle negative sign
-  return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
-}
-
 
   @override
   Widget build(BuildContext context) {
     print('ResourceBar build');
     print('Nation: ${nation.name}');
-    print('Gold: ${nation.totalGoldIncome}');
+    print('Gold: ${nation.gold}');
+    print('Gold Income: ${nation.totalGoldIncome}');
     print('Population: ${nation.totalPopulation}');
     print('Industry: ${nation.totalIndustry}');
     print('Army: ${nation.totalArmy}');
-
-
+    print('Resources: ${nation.resourceCounts}');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Resource bar
         Container(
           margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           decoration: BoxDecoration( 
@@ -88,39 +75,67 @@ class ResourceBar extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                _ResourceItem(
-                  emoji: '💰',
-                  value: _formatNumber(nation.totalGoldIncome),
-                  suffix: '',
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _ResourceItem(
+                      emoji: '💰',
+                      value: _formatNumber(nation.gold),
+                      suffix: '',
+                    ),
+                    _ResourceItem(
+                      emoji: '📈',
+                      value: _formatNumber(nation.totalGoldIncome),
+                      suffix: '/month',
+                    ),
+                    _ResourceItem(
+                      emoji: '👥',
+                      value: _formatNumber(nation.totalPopulation),
+                      suffix: '',
+                    ),
+                    _ResourceItem(
+                      emoji: '⚔️',
+                      value: _formatNumber(nation.totalArmy),
+                      suffix: '',
+                    ),
+                  ],
                 ),
-                _ResourceItem(
-                  emoji: '👥',
-                  value: _formatNumber(nation.totalPopulation),
-                  suffix: '',
-                ),
-                _ResourceItem(
-                  emoji: '🏭',
-                  value: _formatNumber(nation.totalIndustry),
-                  suffix: '',
-                ),
-                _ResourceItem(
-                  emoji: '⚔️',
-                  value: _formatNumber(nation.totalArmy),
-                  suffix: '',
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _ResourceItem(
+                      emoji: '🏭',
+                      value: _formatNumber(nation.totalIndustry),
+                      suffix: '',
+                    ),
+                    _ResourceItem(
+                      emoji: '⛏️',
+                      value: _formatNumber(nation.resourceCounts[ResourceType.coal] ?? 0),
+                      suffix: 'coal',
+                    ),
+                    _ResourceItem(
+                      emoji: '⚒️',
+                      value: _formatNumber(nation.resourceCounts[ResourceType.iron] ?? 0),
+                      suffix: 'iron',
+                    ),
+                    _ResourceItem(
+                      emoji: '🌾',
+                      value: _formatNumber(nation.resourceCounts[ResourceType.food] ?? 0),
+                      suffix: 'food',
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
-        // Flag and date row
         Padding(
           padding: const EdgeInsets.only(left: 16, top: 8),
           child: Row(
             children: [
-              // Flag
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -147,8 +162,7 @@ class ResourceBar extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                        ],
+                        boxShadow: [],
                       ),
                       child: const Text(
                         'Jan 1, 1836',
@@ -169,7 +183,6 @@ class ResourceBar extends StatelessWidget {
     );
   }
 }
-
 
 class _ResourceItem extends StatelessWidget {
   final String emoji;

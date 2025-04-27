@@ -122,4 +122,34 @@ class Game {
   });
 
   Nation get playerNation => nations.firstWhere((n) => n.nationTag == playerNationTag);
+
+  /// Creates a new Game instance with modified gold for a nation
+  Game modifyNationGold(String nationTag, int goldChange) {
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations.map((nation) {
+        if (nation.nationTag == nationTag) {
+          return Nation(
+            nationTag: nation.nationTag,
+            name: nation.name,
+            color: nation.color,
+            hexColor: nation.hexColor,
+            provinces: nation.provinces,
+            borderProvinces: nation.borderProvinces,
+            gold: nation.gold + goldChange,
+            researchPoints: nation.researchPoints,
+            currentResearchId: nation.currentResearchId,
+            currentResearchProgress: nation.currentResearchProgress,
+            buildQueue: nation.buildQueue,
+            isAI: nation.isAI,
+          );
+        }
+        return nation;
+      }).toList(),
+    );
+  }
 } 

@@ -11,11 +11,13 @@ import 'style/my_transition.dart';
 import 'style/palette.dart';
 import 'ui/home_screen.dart';
 import 'ui/game_saves_screen.dart';
+import 'ui/save_game_screen.dart';
 // import 'ui/map_view.dart';
 import 'ui/scenarios_screen.dart';
 import 'ui/country_list_1836_screen.dart';
 import 'ui/game_view_screen.dart';
 import 'data/world_1836.dart';
+import 'models/game_types.dart';
 
 /// The router describes the game's navigational hierarchy
 final router = GoRouter(
@@ -24,6 +26,10 @@ final router = GoRouter(
       path: '/',
       builder: (context, state) => const HomeScreen(key: Key('home')),
       routes: [
+        GoRoute(
+          path: 'save-games',
+          builder: (context, state) => const SaveGameScreen(key: Key('save games')),
+        ),
         GoRoute(
           path: 'game-saves',
           pageBuilder: (context, state) => buildMyTransition<void>(
@@ -69,16 +75,49 @@ final router = GoRouter(
           path: 'game-view/:nationTag',
           pageBuilder: (context, state) {
             final nationTag = state.pathParameters['nationTag'] ?? 'FRA';
+            final saveSlot = (state.extra as Map<String, dynamic>?)?['saveSlot'] as int?;
+            
+            // If this is a new game (no save slot), redirect to save game screen
+            if (saveSlot == null) {
+              final nation = world1836.nations.firstWhere(
+                (n) => n.nationTag == nationTag,
+                orElse: () => world1836.playerNation,
+              );
+              
+              // Create a new game with the selected nation as the player nation
+              final game = Game(
+                id: 'game_${DateTime.now().millisecondsSinceEpoch}',
+                gameName: 'New Game',
+                date: '1836-01-01',
+                mapName: 'world_provinces',
+                playerNationTag: nationTag,
+                nations: [nation, ...world1836.nations.where((n) => n.nationTag != nationTag)],
+              );
+
+              return buildMyTransition<void>(
+                key: ValueKey('save-game'),
+                color: context.watch<Palette>().backgroundLevelSelection,
+                child: SaveGameScreen(
+                  key: Key('save game'),
+                  newGame: game,
+                ),
+              );
+            }
+
+            // Load existing game
             final nation = world1836.nations.firstWhere(
               (n) => n.nationTag == nationTag,
               orElse: () => world1836.playerNation,
             );
+            
             return buildMyTransition<void>(
               key: ValueKey('game-view-$nationTag'),
               color: context.watch<Palette>().backgroundPlaySession,
               child: GameViewScreen(
                 key: Key('game view $nationTag'),
                 game: world1836,
+                saveSlot: saveSlot,
+                nationTag: nationTag,
               ),
             );
           },
