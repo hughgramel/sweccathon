@@ -1,3 +1,4 @@
+import 'package:basic/widgets/interactive_map.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
@@ -50,6 +51,7 @@ class GameViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('GameViewScreen build');
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -61,8 +63,7 @@ class GameViewScreen extends StatelessWidget {
           ),
 
           // Second layer: Interactive map
-          // InteractiveMap(nation: nation),
-          Placeholder(),
+          InteractiveMap(game: game),
           // Top layers: UI elements
           Column(
             children: [
