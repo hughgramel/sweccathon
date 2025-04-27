@@ -13,8 +13,13 @@ import 'province_details_popup.dart';
 
 class InteractiveMap extends StatefulWidget {
   final Game game;
+  final Function(Game) onGameUpdate;
 
-  const InteractiveMap({super.key, required this.game});
+  const InteractiveMap({
+    super.key, 
+    required this.game,
+    required this.onGameUpdate,
+  });
 
   @override
   State<InteractiveMap> createState() => _InteractiveMapState();
@@ -140,6 +145,38 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     _fadeController.forward();
   }
 
+  void _handleRecruitArmy(String provinceId, int armyChange, int industryChange) {
+    final updatedProvinces = widget.game.provinces.map((p) {
+      if (p.id == provinceId) {
+        return Province(
+          id: p.id,
+          name: p.name,
+          path: p.path,
+          population: p.population,
+          goldIncome: p.goldIncome,
+          industry: p.industry + industryChange,
+          buildings: p.buildings,
+          resourceType: p.resourceType,
+          army: p.army + armyChange,
+          owner: p.owner,
+        );
+      }
+      return p;
+    }).toList();
+
+    final updatedGame = Game(
+      id: widget.game.id,
+      gameName: widget.game.gameName,
+      date: widget.game.date,
+      mapName: widget.game.mapName,
+      playerNationTag: widget.game.playerNationTag,
+      nations: widget.game.nations,
+      provinces: updatedProvinces,
+    );
+
+    widget.onGameUpdate(updatedGame);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -216,6 +253,13 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               child: ProvinceDetailsPopup(
                 province: selectedProvince,
                 ownerNation: selectedNation,
+                onRecruitArmy: selectedProvince.industry >= 10 
+                  ? (armyChange, industryChange) => _handleRecruitArmy(
+                      selectedProvince.id,
+                      armyChange,
+                      industryChange,
+                    )
+                  : null,
               ),
             ),
         ],

@@ -4,11 +4,13 @@ import '../models/game_types.dart';
 class ProvinceDetailsPopup extends StatelessWidget {
   final Province province;
   final Nation? ownerNation;
+  final Function(int armyChange, int industryChange)? onRecruitArmy;
 
   const ProvinceDetailsPopup({
     super.key,
     required this.province,
     this.ownerNation,
+    this.onRecruitArmy,
   });
 
   String _formatNumber(num number) {
@@ -137,6 +139,23 @@ class ProvinceDetailsPopup extends StatelessWidget {
                   value: province.buildings.length.toString(),
                   label: 'Buildings',
                 ),
+                if (onRecruitArmy != null && province.industry >= 10)
+                  TextButton.icon(
+                    onPressed: () => onRecruitArmy!(5000, -10),
+                    icon: const Text('⚔️', style: TextStyle(fontSize: 16)),
+                    label: const Text(
+                      'Recruit Army\n(-10 Industry)',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.blue.shade50,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ],

@@ -14,174 +14,83 @@ class ResourceBar extends StatelessWidget {
   });
 
   String _formatNumber(num number) {
-  if (number == 0) return "0";
-  
-  bool isNegative = number < 0;
-  number = number.abs();
-  
-  final suffixes = ["", "k", "m", "b", "t"];
-  
-  int suffixIndex = 0;
-  while (number >= 1000 && suffixIndex < suffixes.length - 1) {
-    number /= 1000;
-    suffixIndex++;
-  }
-  
-  String formatted;
-  if (number >= 100) {
-    formatted = number.round().toString();
-  } else if (number >= 10) {
-    formatted = number.toStringAsFixed(1);
-    if (formatted.endsWith('.0')) {
-      formatted = formatted.substring(0, formatted.length - 2);
+    if (number == 0) return "0";
+    
+    bool isNegative = number < 0;
+    number = number.abs();
+    
+    final suffixes = ["", "k", "m", "b", "t"];
+    
+    int suffixIndex = 0;
+    while (number >= 1000 && suffixIndex < suffixes.length - 1) {
+      number /= 1000;
+      suffixIndex++;
     }
-  } else {
-    formatted = number.toStringAsFixed(2);
-    if (formatted.endsWith('0')) {
-      formatted = formatted.substring(0, formatted.length - 1);
+    
+    String formatted;
+    if (number >= 100) {
+      formatted = number.round().toString();
+    } else if (number >= 10) {
+      formatted = number.toStringAsFixed(1);
       if (formatted.endsWith('.0')) {
         formatted = formatted.substring(0, formatted.length - 2);
       }
+    } else {
+      formatted = number.toStringAsFixed(2);
+      if (formatted.endsWith('0')) {
+        formatted = formatted.substring(0, formatted.length - 1);
+        if (formatted.endsWith('.0')) {
+          formatted = formatted.substring(0, formatted.length - 2);
+        }
+      }
     }
+    
+    return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
   }
-  
-  return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
-}
 
   @override
   Widget build(BuildContext context) {
-    print('ResourceBar build');
-    print('Nation: ${nation.name}');
-    print('Gold: ${nation.gold}');
-    print('Gold Income: ${nation.getTotalGoldIncome(provinces)}');
-    print('Population: ${nation.getTotalPopulation(provinces)}');
-    print('Industry: ${nation.getTotalIndustry(provinces)}');
-    print('Army: ${nation.getTotalArmy(provinces)}');
-    print('Resources: ${nation.getResourceCounts(provinces)}');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          decoration: BoxDecoration( 
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                offset: const Offset(0, 2),
-                blurRadius: 3,
-              ),
-            ],
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      decoration: BoxDecoration( 
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            offset: const Offset(0, 2),
+            blurRadius: 3,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _ResourceItem(
-                      emoji: '💰',
-                      value: _formatNumber(nation.gold),
-                      suffix: '',
-                    ),
-                    _ResourceItem(
-                      emoji: '📈',
-                      value: _formatNumber(nation.getTotalGoldIncome(provinces)),
-                      suffix: '/month',
-                    ),
-                    _ResourceItem(
-                      emoji: '👥',
-                      value: _formatNumber(nation.getTotalPopulation(provinces)),
-                      suffix: '',
-                    ),
-                    _ResourceItem(
-                      emoji: '⚔️',
-                      value: _formatNumber(nation.getTotalArmy(provinces)),
-                      suffix: '',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _ResourceItem(
-                      emoji: '🏭',
-                      value: _formatNumber(nation.getTotalIndustry(provinces)),
-                      suffix: '',
-                    ),
-                    _ResourceItem(
-                      emoji: '⛏️',
-                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.coal] ?? 0),
-                      suffix: 'coal',
-                    ),
-                    _ResourceItem(
-                      emoji: '⚒️',
-                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.iron] ?? 0),
-                      suffix: 'iron',
-                    ),
-                    _ResourceItem(
-                      emoji: '🌾',
-                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.food] ?? 0),
-                      suffix: 'food',
-                    ),
-                  ],
-                ),
-              ],
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _ResourceItem(
+              emoji: '💰',
+              value: _formatNumber(nation.gold),
+              suffix: '',
             ),
-          ),
+            _ResourceItem(
+              emoji: '👥',
+              value: _formatNumber(nation.getTotalPopulation(provinces)),
+              suffix: '',
+            ),
+            _ResourceItem(
+              emoji: '🏭',
+              value: _formatNumber(nation.getTotalIndustry(provinces)),
+              suffix: '',
+            ),
+            _ResourceItem(
+              emoji: '⚔️',
+              value: _formatNumber(nation.getTotalArmy(provinces)),
+              suffix: '',
+            ),
+          ],
         ),
-        Padding(
-          padding: const EdgeInsets.only(left: 16, top: 8),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(0, 2),
-                      blurRadius: 3,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/flags/${nation.nationTag.toLowerCase()}.png',
-                      width: 40,
-                      height: 30,
-                      fit: BoxFit.contain,
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [],
-                      ),
-                      child: const Text(
-                        'Jan 1, 1836',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

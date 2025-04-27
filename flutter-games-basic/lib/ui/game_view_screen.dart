@@ -27,6 +27,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   late Game currentGame;
   final gamePersistence = GamePersistenceService();
   bool _isLoading = true;
+  bool _isTransitioning = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
@@ -121,10 +122,20 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
     }
   }
 
+  void _handleReturnHome() {
+    setState(() => _isTransitioning = true);
+    _fadeController.forward().then((_) {
+      if (mounted) {
+        context.go('/');
+      }
+    });
+  }
+
   void _showMenuModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (BuildContext context) {
+      useRootNavigator: true,  // Use root navigator
+      builder: (BuildContext modalContext) {  // Use separate context for modal
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -134,12 +145,10 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 leading: const Icon(Icons.save),
                 title: const Text('Save Game'),
                 onTap: () async {
-                  Navigator.pop(context);
-                  // If we don't have a save slot, go to save game screen
+                  Navigator.pop(modalContext);
                   if (widget.saveSlot == null) {
                     context.go('/save-games', extra: {'newGame': currentGame});
                   } else {
-                    // Save to current slot
                     await gamePersistence.saveGameToSlot(currentGame, widget.saveSlot!);
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -153,16 +162,11 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 leading: const Icon(Icons.home),
                 title: const Text('Return Home'),
                 onTap: () {
-                  Navigator.pop(context);
-                  context.go('/');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.settings),
-                title: const Text('Settings'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.go('/settings');
+                  print('Return Home');
+                  // Close modal using modal's context
+                  Navigator.pop(modalContext);
+                  // Navigate using GoRouter
+                  GoRouter.of(context).goNamed('/');
                 },
               ),
             ],
@@ -175,6 +179,12 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   void _addGold() {
     setState(() {
       currentGame = currentGame.modifyNationGold(currentGame.playerNationTag, 100);
+    });
+  }
+
+  void _handleGameUpdate(Game updatedGame) {
+    setState(() {
+      currentGame = updatedGame;
     });
   }
 
@@ -232,7 +242,10 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
             ),
 
             // Second layer: Interactive map
-            InteractiveMap(game: currentGame),
+            InteractiveMap(
+              game: currentGame,
+              onGameUpdate: _handleGameUpdate,
+            ),
             // Top layers: UI elements
             Column(
               children: [

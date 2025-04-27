@@ -21,9 +21,11 @@ import 'models/game_types.dart';
 
 /// The router describes the game's navigational hierarchy
 final router = GoRouter(
+  initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',
+      name: '/',
       builder: (context, state) => const HomeScreen(key: Key('home')),
       routes: [
         GoRoute(
