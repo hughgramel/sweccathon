@@ -75,7 +75,7 @@ class _InteractiveMapState extends State<InteractiveMap> {
             Container(
               width: 1200,
               height: 200,
-              color: Colors.brown,
+              color: const Color.fromARGB(255, 209, 229, 240),
             ),
             SizedBox(
               width: 1200,
@@ -95,7 +95,7 @@ class _InteractiveMapState extends State<InteractiveMap> {
             Container(
               width: 1200,
               height: 200,
-              color: Colors.brown,
+              color: const Color.fromARGB(255, 209, 229, 240),
             ),
           ],
         ),
