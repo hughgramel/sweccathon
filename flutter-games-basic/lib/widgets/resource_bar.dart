@@ -12,39 +12,39 @@ class ResourceBar extends StatelessWidget {
   });
 
   String _formatNumber(num number) {
-    if (number == 0) return "0";
-    
-    bool isNegative = number < 0;
-    number = number.abs();
-    
-    final suffixes = ["", "k", "m", "b", "t"];
-    
-    int suffixIndex = 0;
-    while (number >= 1000 && suffixIndex < suffixes.length - 1) {
-      number /= 1000;
-      suffixIndex++;
+  if (number == 0) return "0";
+  
+  bool isNegative = number < 0;
+  number = number.abs();
+  
+  final suffixes = ["", "k", "m", "b", "t"];
+  
+  int suffixIndex = 0;
+  while (number >= 1000 && suffixIndex < suffixes.length - 1) {
+    number /= 1000;
+    suffixIndex++;
+  }
+  
+  String formatted;
+  if (number >= 100) {
+    formatted = number.round().toString();
+  } else if (number >= 10) {
+    formatted = number.toStringAsFixed(1);
+    if (formatted.endsWith('.0')) {
+      formatted = formatted.substring(0, formatted.length - 2);
     }
-    
-    String formatted;
-    if (number >= 100) {
-      formatted = number.round().toString();
-    } else if (number >= 10) {
-      formatted = number.toStringAsFixed(1);
+  } else {
+    formatted = number.toStringAsFixed(2);
+    if (formatted.endsWith('0')) {
+      formatted = formatted.substring(0, formatted.length - 1);
       if (formatted.endsWith('.0')) {
         formatted = formatted.substring(0, formatted.length - 2);
       }
-    } else {
-      formatted = number.toStringAsFixed(2);
-      if (formatted.endsWith('0')) {
-        formatted = formatted.substring(0, formatted.length - 1);
-        if (formatted.endsWith('.0')) {
-          formatted = formatted.substring(0, formatted.length - 2);
-        }
-      }
     }
-    
-    return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
   }
+  
+  return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
+}
 
   @override
   Widget build(BuildContext context) {
@@ -78,23 +78,23 @@ class ResourceBar extends StatelessWidget {
             child: Column(
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _ResourceItem(
-                      emoji: '💰',
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _ResourceItem(
+                  emoji: '💰',
                       value: _formatNumber(nation.gold),
-                      suffix: '',
-                    ),
+                  suffix: '',
+                ),
                     _ResourceItem(
                       emoji: '📈',
                       value: _formatNumber(nation.totalGoldIncome),
                       suffix: '/month',
                     ),
-                    _ResourceItem(
-                      emoji: '👥',
-                      value: _formatNumber(nation.totalPopulation),
-                      suffix: '',
-                    ),
+                _ResourceItem(
+                  emoji: '👥',
+                  value: _formatNumber(nation.totalPopulation),
+                  suffix: '',
+                ),
                     _ResourceItem(
                       emoji: '⚔️',
                       value: _formatNumber(nation.totalArmy),
@@ -106,12 +106,12 @@ class ResourceBar extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _ResourceItem(
-                      emoji: '🏭',
-                      value: _formatNumber(nation.totalIndustry),
-                      suffix: '',
-                    ),
-                    _ResourceItem(
+                _ResourceItem(
+                  emoji: '🏭',
+                  value: _formatNumber(nation.totalIndustry),
+                  suffix: '',
+                ),
+                _ResourceItem(
                       emoji: '⛏️',
                       value: _formatNumber(nation.resourceCounts[ResourceType.coal] ?? 0),
                       suffix: 'coal',

@@ -23,60 +23,101 @@ class GameViewScreen extends StatefulWidget {
   State<GameViewScreen> createState() => _GameViewScreenState();
 }
 
-class _GameViewScreenState extends State<GameViewScreen> {
+class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProviderStateMixin {
   late Game currentGame;
   final gamePersistence = GamePersistenceService();
+  bool _isLoading = true;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    
+    // Initialize fade controller
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
+    
+    // Set loading state immediately
+    setState(() {
+      _isLoading = true;
+    });
+    
+    // Start loading game
     _loadGame();
   }
 
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadGame() async {
-    if (widget.saveSlot != null) {
-      final savedGame = await gamePersistence.loadGameFromSlot(widget.saveSlot!);
-      if (savedGame != null) {
-        setState(() {
-          currentGame = savedGame;
-        });
-        // Print game state
-        print('\n=== Game State ===');
-        print('Game ID: ${savedGame.id}');
-        print('Game Name: ${savedGame.gameName}');
-        print('Date: ${savedGame.date}');
-        print('Map: ${savedGame.mapName}');
-        print('Player Nation Tag: ${savedGame.playerNationTag}');
-        print('\nNations:');
-        for (final nation in savedGame.nations) {
-          print('\n--- ${nation.name} (${nation.nationTag}) ---');
-          print('Color: ${nation.color}');
-          print('Gold: ${nation.gold}');
-          print('Research Points: ${nation.researchPoints}');
-          print('Current Research: ${nation.currentResearchId} (${nation.currentResearchProgress}%)');
-          print('Is AI: ${nation.isAI}');
-          print('Total Population: ${nation.totalPopulation}');
-          print('Total Gold Income: ${nation.totalGoldIncome}');
-          print('Total Industry: ${nation.totalIndustry}');
-          print('Total Army: ${nation.totalArmy}');
-          print('Resources: ${nation.resourceCounts}');
-          print('\nProvinces:');
-          for (final province in nation.provinces) {
-            print('  - ${province.name}');
-            print('    Population: ${province.population}');
-            print('    Gold Income: ${province.goldIncome}');
-            print('    Industry: ${province.industry}');
-            print('    Army: ${province.army}');
-            print('    Resource: ${province.resourceType}');
+    try {
+      if (widget.saveSlot != null) {
+        final savedGame = await gamePersistence.loadGameFromSlot(widget.saveSlot!);
+        if (savedGame != null) {
+          setState(() {
+            currentGame = savedGame;
+            _isLoading = false;
+          });
+          _fadeController.forward();
+          // Print game state
+          print('\n=== Game State ===');
+          print('Game ID: ${savedGame.id}');
+          print('Game Name: ${savedGame.gameName}');
+          print('Date: ${savedGame.date}');
+          print('Map: ${savedGame.mapName}');
+          print('Player Nation Tag: ${savedGame.playerNationTag}');
+          print('\nNations:');
+          for (final nation in savedGame.nations) {
+            print('\n--- ${nation.name} (${nation.nationTag}) ---');
+            print('Color: ${nation.color}');
+            print('Gold: ${nation.gold}');
+            print('Research Points: ${nation.researchPoints}');
+            print('Current Research: ${nation.currentResearchId} (${nation.currentResearchProgress}%)');
+            print('Is AI: ${nation.isAI}');
+            print('Total Population: ${nation.totalPopulation}');
+            print('Total Gold Income: ${nation.totalGoldIncome}');
+            print('Total Industry: ${nation.totalIndustry}');
+            print('Total Army: ${nation.totalArmy}');
+            print('Resources: ${nation.resourceCounts}');
+            print('\nProvinces:');
+            for (final province in nation.provinces) {
+              print('  - ${province.name}');
+              print('    Population: ${province.population}');
+              print('    Gold Income: ${province.goldIncome}');
+              print('    Industry: ${province.industry}');
+              print('    Army: ${province.army}');
+              print('    Resource: ${province.resourceType}');
+            }
           }
+          print('\n=================\n');
+          return;
         }
-        print('\n=================\n');
-        return;
+      }
+      setState(() {
+        currentGame = widget.game;
+        _isLoading = false;
+      });
+      _fadeController.forward();
+    } catch (e) {
+      print('Error loading game: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error loading game. Please try again.')),
+        );
       }
     }
-    setState(() {
-      currentGame = widget.game;
-    });
   }
 
   void _showMenuModal(BuildContext context) {
@@ -153,52 +194,78 @@ class _GameViewScreenState extends State<GameViewScreen> {
   @override
   Widget build(BuildContext context) {
     print('GameViewScreen build');
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Bottom layer: Grid background
-          CustomPaint(
-            size: Size.infinite,
-            painter: GridPainter(),
-          ),
-
-          // Second layer: Interactive map
-          InteractiveMap(game: currentGame),
-          // Top layers: UI elements
-          Column(
+    
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Top bar with resource bar
-              SafeArea(
-                child: ResourceBar(
-                  nation: currentGame.playerNation,
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Loading Game...',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: FloatingActionButton(
-              onPressed: () => _showMenuModal(context),
-              child: const Icon(Icons.menu),
+        ),
+      );
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            // Bottom layer: Grid background
+            CustomPaint(
+              size: Size.infinite,
+              painter: GridPainter(),
             ),
-          ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: FloatingActionButton(
-              onPressed: _addGold,
-              child: const Icon(Icons.monetization_on),
+
+            // Second layer: Interactive map
+            InteractiveMap(game: currentGame),
+            // Top layers: UI elements
+            Column(
+              children: [
+                // Top bar with resource bar
+                SafeArea(
+                  child: ResourceBar(
+                    nation: currentGame.playerNation,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: FloatingActionButton(
+                onPressed: () => _showMenuModal(context),
+                child: const Icon(Icons.menu),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: FloatingActionButton(
+                onPressed: _addGold,
+                child: const Icon(Icons.monetization_on),
+              ),
+            ),
+          ],
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
 }

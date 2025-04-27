@@ -19,16 +19,34 @@ class InteractiveMap extends StatefulWidget {
   State<InteractiveMap> createState() => _InteractiveMapState();
 }
 
-class _InteractiveMapState extends State<InteractiveMap> {
+class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProviderStateMixin {
   List<Region> regions = [];
   Region? selectedRegion;
+  bool _isLoading = true;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
-    print('InteractiveMap initState');
     super.initState();
+    print('InteractiveMap initState');
+    
+    // Initialize fade controller
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
+    
     print('Starting to load regions...');
     loadRegions();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> loadRegions() async {
@@ -56,48 +74,71 @@ class _InteractiveMapState extends State<InteractiveMap> {
     print('Successfully parsed ${loadedRegions.length} regions');
     setState(() {
       regions = loadedRegions;
+      _isLoading = false;
       print('State updated with ${regions.length} regions');
     });
+    _fadeController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    return Center(
-      child: InteractiveViewer(
-        boundaryMargin: EdgeInsets.all(8.0),
-        minScale: 0.1,
-        maxScale: 20.0,
-        constrained: false,
+    if (_isLoading) {
+      return const Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Large box to be above the map
-            Container(
-              width: 1200,
-              height: 200,
-              color: const Color.fromARGB(255, 209, 229, 240),
-            ),
-            SizedBox(
-              width: 1200,
-              height: 480,
-              child: Container(
-                color: const Color.fromARGB(255, 209, 229, 240),
-                child: Stack(
-                  children: [
-                    for (final region in regions)...{
-                      _getRegionImage(region, selectedRegion == region ? Colors.green : Colors.grey),
-                      _getRegionBorder(region),
-                    }
-                  ],
-                ),
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text(
+              'Loading Map...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            Container(
-              width: 1200,
-              height: 200,
-              color: const Color.fromARGB(255, 209, 229, 240),
-            ),
           ],
+        ),
+      );
+    }
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Center(
+        child: InteractiveViewer(
+          boundaryMargin: EdgeInsets.all(8.0),
+          minScale: 0.1,
+          maxScale: 20.0,
+          constrained: false,
+          child: Column(
+            children: [
+              // Large box to be above the map
+              Container(
+                width: 1200,
+                height: 200,
+                color: const Color.fromARGB(255, 209, 229, 240),
+              ),
+              SizedBox(
+                width: 1200,
+                height: 480,
+                child: Container(
+                  color: const Color.fromARGB(255, 209, 229, 240),
+                  child: Stack(
+                    children: [
+                      for (final region in regions)...{
+                        _getRegionImage(region, selectedRegion == region ? Colors.green : Colors.grey),
+                        _getRegionBorder(region),
+                      }
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: 1200,
+                height: 200,
+                color: const Color.fromARGB(255, 209, 229, 240),
+              ),
+            ],
+          ),
         ),
       ),
     );
