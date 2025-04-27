@@ -40,6 +40,37 @@ class _GameViewScreenState extends State<GameViewScreen> {
         setState(() {
           currentGame = savedGame;
         });
+        // Print game state
+        print('\n=== Game State ===');
+        print('Game ID: ${savedGame.id}');
+        print('Game Name: ${savedGame.gameName}');
+        print('Date: ${savedGame.date}');
+        print('Map: ${savedGame.mapName}');
+        print('Player Nation Tag: ${savedGame.playerNationTag}');
+        print('\nNations:');
+        for (final nation in savedGame.nations) {
+          print('\n--- ${nation.name} (${nation.nationTag}) ---');
+          print('Color: ${nation.color}');
+          print('Gold: ${nation.gold}');
+          print('Research Points: ${nation.researchPoints}');
+          print('Current Research: ${nation.currentResearchId} (${nation.currentResearchProgress}%)');
+          print('Is AI: ${nation.isAI}');
+          print('Total Population: ${nation.totalPopulation}');
+          print('Total Gold Income: ${nation.totalGoldIncome}');
+          print('Total Industry: ${nation.totalIndustry}');
+          print('Total Army: ${nation.totalArmy}');
+          print('Resources: ${nation.resourceCounts}');
+          print('\nProvinces:');
+          for (final province in nation.provinces) {
+            print('  - ${province.name}');
+            print('    Population: ${province.population}');
+            print('    Gold Income: ${province.goldIncome}');
+            print('    Industry: ${province.industry}');
+            print('    Army: ${province.army}');
+            print('    Resource: ${province.resourceType}');
+          }
+        }
+        print('\n=================\n');
         return;
       }
     }
