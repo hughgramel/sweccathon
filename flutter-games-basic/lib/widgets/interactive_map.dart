@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../models/game_types.dart';
 import 'package:xml/xml.dart';
 import 'package:path_drawing/path_drawing.dart';
+import 'province_details_popup.dart';
 
 
 class InteractiveMap extends StatefulWidget {
@@ -25,6 +26,65 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   bool _isLoading = true;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+
+  // Helper method to convert hex color string to Color
+  Color _hexToColor(String hexString) {
+    final buffer = StringBuffer();
+    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+    buffer.write(hexString.replaceFirst('#', ''));
+    return Color(int.parse(buffer.toString(), radix: 16));
+  }
+
+  // Helper method to get province color based on ownership
+  Color _getProvinceColor(String regionId) {
+    final province = _getProvinceForRegion(regionId);
+    if (province.id.isEmpty) {
+      return Colors.grey; // Default color for unowned provinces
+    }
+
+    final ownerNation = _getNationForProvince(province);
+    if (ownerNation == null) {
+      return Colors.grey; // Default color if owner not found
+    }
+
+    return _hexToColor(ownerNation.hexColor);
+  }
+
+  Province _getProvinceForRegion(String regionId) {
+    return widget.game.provinces.firstWhere(
+      (p) => p.id == regionId,
+      orElse: () => Province(
+        id: '',
+        name: '',
+        path: '',
+        population: 0,
+        goldIncome: 0,
+        industry: 0,
+        buildings: [],
+        resourceType: ResourceType.none,
+        army: 0,
+        owner: '',
+      ),
+    );
+  }
+
+  Nation? _getNationForProvince(Province province) {
+    if (province.owner.isEmpty) return null;
+    return widget.game.nations.firstWhere(
+      (n) => n.nationTag == province.owner,
+      orElse: () => Nation(
+        nationTag: '',
+        name: '',
+        color: '',
+        hexColor: '',
+        nationProvinces: [],
+        gold: 0,
+        researchPoints: 0,
+        currentResearchProgress: 0,
+        isAI: false,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -101,50 +161,69 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       );
     }
 
+    final selectedProvince = selectedRegion != null ? _getProvinceForRegion(selectedRegion!.id) : null;
+    final selectedNation = selectedProvince != null && selectedProvince.id.isNotEmpty 
+        ? _getNationForProvince(selectedProvince) 
+        : null;
+
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Center(
-        child: InteractiveViewer(
-          boundaryMargin: EdgeInsets.all(8.0),
-          minScale: 0.1,
-          maxScale: 20.0,
-          constrained: false,
-          child: Column(
-            children: [
-              // Large box to be above the map
-              Container(
-                width: 1200,
-                height: 200,
-                color: const Color.fromARGB(255, 209, 229, 240),
-              ),
-              SizedBox(
-                width: 1200,
-                height: 480,
-                child: Container(
-                  color: const Color.fromARGB(255, 209, 229, 240),
-                  child: Stack(
-                    children: [
-                      for (final region in regions)...{
-                        _getRegionImage(region, selectedRegion == region ? Colors.green : Colors.grey),
-                        _getRegionBorder(region),
-                      }
-                    ],
+      child: Stack(
+        children: [
+          Center(
+            child: InteractiveViewer(
+              boundaryMargin: EdgeInsets.all(8.0),
+              minScale: 0.1,
+              maxScale: 20.0,
+              constrained: false,
+              child: Column(
+                children: [
+                  // Large box to be above the map
+                  Container(
+                    width: 1200,
+                    height: 200,
+                    color: const Color.fromARGB(255, 209, 229, 240),
                   ),
-                ),
+                  SizedBox(
+                    width: 1200,
+                    height: 480,
+                    child: Container(
+                      color: const Color.fromARGB(255, 209, 229, 240),
+                      child: Stack(
+                        children: [
+                          for (final region in regions)...{
+                            _getRegionImage(region),
+                            _getRegionBorder(region),
+                          }
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 1200,
+                    height: 200,
+                    color: const Color.fromARGB(255, 209, 229, 240),
+                  ),
+                ],
               ),
-              Container(
-                width: 1200,
-                height: 200,
-                color: const Color.fromARGB(255, 209, 229, 240),
-              ),
-            ],
+            ),
           ),
-        ),
+          if (selectedProvince != null && selectedProvince.id.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ProvinceDetailsPopup(
+                province: selectedProvince,
+                ownerNation: selectedNation,
+              ),
+            ),
+        ],
       ),
     );
   }
 
-  Widget _getRegionImage(Region region, [Color? color = Colors.grey]) {
+  Widget _getRegionImage(Region region) {
     return ClipPath(
       clipper: RegionClipper(svgPath: region.path),
       child: GestureDetector(
@@ -155,7 +234,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
           });
         },
         child: Container(
-          color: color,
+          color: _getProvinceColor(region.id),
         ),
       ),
     );

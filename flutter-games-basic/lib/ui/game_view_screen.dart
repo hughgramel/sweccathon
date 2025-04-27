@@ -82,13 +82,14 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
             print('Research Points: ${nation.researchPoints}');
             print('Current Research: ${nation.currentResearchId} (${nation.currentResearchProgress}%)');
             print('Is AI: ${nation.isAI}');
-            print('Total Population: ${nation.totalPopulation}');
-            print('Total Gold Income: ${nation.totalGoldIncome}');
-            print('Total Industry: ${nation.totalIndustry}');
-            print('Total Army: ${nation.totalArmy}');
-            print('Resources: ${nation.resourceCounts}');
+            print('Total Population: ${nation.getTotalPopulation(savedGame.provinces)}');
+            print('Total Gold Income: ${nation.getTotalGoldIncome(savedGame.provinces)}');
+            print('Total Industry: ${nation.getTotalIndustry(savedGame.provinces)}');
+            print('Total Army: ${nation.getTotalArmy(savedGame.provinces)}');
+            print('Resources: ${nation.getResourceCounts(savedGame.provinces)}');
             print('\nProvinces:');
-            for (final province in nation.provinces) {
+            for (final provinceId in nation.nationProvinces) {
+              final province = savedGame.provinces.firstWhere((p) => p.id == provinceId);
               print('  - ${province.name}');
               print('    Population: ${province.population}');
               print('    Gold Income: ${province.goldIncome}');
@@ -187,6 +188,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
         mapName: 'world_provinces',
         playerNationTag: widget.nationTag,
         nations: [nation, ...world1836.nations.where((n) => n.nationTag != widget.nationTag)],
+        provinces: world1836.provinces,
       );
     });
   }
@@ -238,6 +240,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 SafeArea(
                   child: ResourceBar(
                     nation: currentGame.playerNation,
+                    provinces: currentGame.provinces,
                   ),
                 ),
               ],
@@ -249,17 +252,65 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 16),
-              child: FloatingActionButton(
-                onPressed: () => _showMenuModal(context),
-                child: const Icon(Icons.menu),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 2),
+                      blurRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () => _showMenuModal(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      child: const Icon(
+                        Icons.menu,
+                        color: Colors.black87,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.only(left: 16),
-              child: FloatingActionButton(
-                onPressed: _addGold,
-                child: const Icon(Icons.monetization_on),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      offset: const Offset(0, 2),
+                      blurRadius: 3,
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _addGold,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      child: const Icon(
+                        Icons.monetization_on,
+                        color: Colors.black87,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

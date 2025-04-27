@@ -135,12 +135,12 @@ class _NationCard extends StatelessWidget {
               children: [
                 _StatItem(
                   icon: Icons.people_outline,
-                  value: '${(nation.totalPopulation / 1000000).toStringAsFixed(1)}M',
+                  value: '${(nation.getTotalPopulation(world1836.provinces) / 1000000).toStringAsFixed(1)}M',
                   label: 'Population',
                 ),
                 _StatItem(
                   icon: Icons.factory_outlined,
-                  value: nation.totalIndustry.toString(),
+                  value: nation.getTotalIndustry(world1836.provinces).toString(),
                   label: 'Industry',
                 ),
                 _StatItem(
@@ -150,7 +150,7 @@ class _NationCard extends StatelessWidget {
                 ),
                 _StatItem(
                   icon: Icons.military_tech_outlined,
-                  value: nation.totalArmy.toString(),
+                  value: nation.getTotalArmy(world1836.provinces).toString(),
                   label: 'Army',
                 ),
               ],

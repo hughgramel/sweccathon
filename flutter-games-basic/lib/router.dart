@@ -92,6 +92,7 @@ final router = GoRouter(
                 mapName: 'world_provinces',
                 playerNationTag: nationTag,
                 nations: [nation, ...world1836.nations.where((n) => n.nationTag != nationTag)],
+                provinces: world1836.provinces,
               );
 
               return buildMyTransition<void>(

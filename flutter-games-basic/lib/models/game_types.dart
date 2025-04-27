@@ -46,6 +46,7 @@ class Province {
   final List<Building> buildings;
   final ResourceType resourceType;
   final int army;
+  final String owner;  // Nation tag of the owner
 
   Province({
     required this.id,
@@ -57,6 +58,7 @@ class Province {
     required this.buildings,
     required this.resourceType,
     required this.army,
+    required this.owner,
   });
 }
 
@@ -65,8 +67,7 @@ class Nation {
   final String name;
   final String color;
   final String hexColor;
-  final List<Province> provinces;
-  final List<Province>? borderProvinces;
+  final List<String> nationProvinces;  // List of province IDs owned by this nation
   final int gold;
   final int researchPoints;
   final String? currentResearchId;
@@ -79,8 +80,7 @@ class Nation {
     required this.name,
     required this.color,
     required this.hexColor,
-    required this.provinces,
-    this.borderProvinces,
+    required this.nationProvinces,
     required this.gold,
     required this.researchPoints,
     this.currentResearchId,
@@ -89,15 +89,27 @@ class Nation {
     required this.isAI,
   });
 
-  // Calculate total resources
-  int get totalPopulation => provinces.fold(0, (sum, p) => sum + p.population);
-  int get totalGoldIncome => provinces.fold(0, (sum, p) => sum + p.goldIncome);
-  int get totalIndustry => provinces.fold(0, (sum, p) => sum + p.industry);
-  int get totalArmy => provinces.fold(0, (sum, p) => sum + p.army);
+  // Calculate total resources - now takes provinces as parameter
+  int getTotalPopulation(List<Province> allProvinces) => 
+    nationProvinces.fold(0, (sum, id) => 
+      sum + (allProvinces.firstWhere((p) => p.id == id).population));
   
-  Map<ResourceType, int> get resourceCounts {
+  int getTotalGoldIncome(List<Province> allProvinces) => 
+    nationProvinces.fold(0, (sum, id) => 
+      sum + (allProvinces.firstWhere((p) => p.id == id).goldIncome));
+  
+  int getTotalIndustry(List<Province> allProvinces) => 
+    nationProvinces.fold(0, (sum, id) => 
+      sum + (allProvinces.firstWhere((p) => p.id == id).industry));
+  
+  int getTotalArmy(List<Province> allProvinces) => 
+    nationProvinces.fold(0, (sum, id) => 
+      sum + (allProvinces.firstWhere((p) => p.id == id).army));
+  
+  Map<ResourceType, int> getResourceCounts(List<Province> allProvinces) {
     final counts = <ResourceType, int>{};
-    for (final province in provinces) {
+    for (final provinceId in nationProvinces) {
+      final province = allProvinces.firstWhere((p) => p.id == provinceId);
       counts[province.resourceType] = (counts[province.resourceType] ?? 0) + 1;
     }
     return counts;
@@ -111,6 +123,7 @@ class Game {
   final String mapName;
   final String playerNationTag;
   final List<Nation> nations;
+  final List<Province> provinces;  // All provinces in the game
 
   Game({
     required this.id,
@@ -119,6 +132,7 @@ class Game {
     required this.mapName,
     required this.playerNationTag,
     required this.nations,
+    required this.provinces,
   });
 
   Nation get playerNation => nations.firstWhere((n) => n.nationTag == playerNationTag);
@@ -138,8 +152,7 @@ class Game {
             name: nation.name,
             color: nation.color,
             hexColor: nation.hexColor,
-            provinces: nation.provinces,
-            borderProvinces: nation.borderProvinces,
+            nationProvinces: nation.nationProvinces,
             gold: nation.gold + goldChange,
             researchPoints: nation.researchPoints,
             currentResearchId: nation.currentResearchId,
@@ -150,6 +163,7 @@ class Game {
         }
         return nation;
       }).toList(),
+      provinces: provinces,
     );
   }
 } 

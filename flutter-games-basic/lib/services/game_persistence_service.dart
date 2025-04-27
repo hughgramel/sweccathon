@@ -94,6 +94,7 @@ class GamePersistenceService {
       'mapName': game.mapName,
       'playerNationTag': game.playerNationTag,
       'nations': game.nations.map((nation) => _nationToJson(nation)).toList(),
+      'provinces': game.provinces.map((province) => _provinceToJson(province)).toList(),
     };
   }
 
@@ -104,7 +105,7 @@ class GamePersistenceService {
       'name': nation.name,
       'color': nation.color,
       'hexColor': nation.hexColor,
-      'provinces': nation.provinces.map((province) => _provinceToJson(province)).toList(),
+      'nationProvinces': nation.nationProvinces,
       'gold': nation.gold,
       'researchPoints': nation.researchPoints,
       'currentResearchId': nation.currentResearchId,
@@ -126,6 +127,7 @@ class GamePersistenceService {
       'buildings': province.buildings.map((building) => _buildingToJson(building)).toList(),
       'resourceType': province.resourceType.index,
       'army': province.army,
+      'owner': province.owner,
     };
   }
 
@@ -161,6 +163,9 @@ class GamePersistenceService {
       nations: (json['nations'] as List)
           .map((nationJson) => _nationFromJson(nationJson as Map<String, dynamic>))
           .toList(),
+      provinces: (json['provinces'] as List)
+          .map((provinceJson) => _provinceFromJson(provinceJson as Map<String, dynamic>))
+          .toList(),
     );
   }
 
@@ -171,13 +176,11 @@ class GamePersistenceService {
       name: json['name'] as String,
       color: json['color'] as String,
       hexColor: json['hexColor'] as String,
-      provinces: (json['provinces'] as List)
-          .map((provinceJson) => _provinceFromJson(provinceJson as Map<String, dynamic>))
-          .toList(),
+      nationProvinces: (json['nationProvinces'] as List).cast<String>(),
       gold: (json['gold'] as num).toInt(),
       researchPoints: (json['researchPoints'] as num).toInt(),
       currentResearchId: json['currentResearchId'] as String?,
-      currentResearchProgress: (json['currentResearchProgress'] as num?)?.toInt() ?? 0,
+      currentResearchProgress: (json['currentResearchProgress'] as num).toInt(),
       buildQueue: json['buildQueue'] != null
           ? (json['buildQueue'] as List)
               .map((buildJson) => _queuedBuildFromJson(buildJson as Map<String, dynamic>))
@@ -201,6 +204,7 @@ class GamePersistenceService {
           .toList(),
       resourceType: ResourceType.values[json['resourceType'] as int],
       army: (json['army'] as num).toInt(),
+      owner: json['owner'] as String,
     );
   }
 

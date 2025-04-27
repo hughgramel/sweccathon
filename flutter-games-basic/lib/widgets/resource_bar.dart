@@ -5,10 +5,12 @@ import 'dart:math';
 
 class ResourceBar extends StatelessWidget {
   final Nation nation;
+  final List<Province> provinces;
 
   const ResourceBar({
     super.key,
     required this.nation,
+    required this.provinces,
   });
 
   String _formatNumber(num number) {
@@ -51,11 +53,11 @@ class ResourceBar extends StatelessWidget {
     print('ResourceBar build');
     print('Nation: ${nation.name}');
     print('Gold: ${nation.gold}');
-    print('Gold Income: ${nation.totalGoldIncome}');
-    print('Population: ${nation.totalPopulation}');
-    print('Industry: ${nation.totalIndustry}');
-    print('Army: ${nation.totalArmy}');
-    print('Resources: ${nation.resourceCounts}');
+    print('Gold Income: ${nation.getTotalGoldIncome(provinces)}');
+    print('Population: ${nation.getTotalPopulation(provinces)}');
+    print('Industry: ${nation.getTotalIndustry(provinces)}');
+    print('Army: ${nation.getTotalArmy(provinces)}');
+    print('Resources: ${nation.getResourceCounts(provinces)}');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,26 +80,26 @@ class ResourceBar extends StatelessWidget {
             child: Column(
               children: [
                 Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _ResourceItem(
-                  emoji: '💰',
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _ResourceItem(
+                      emoji: '💰',
                       value: _formatNumber(nation.gold),
-                  suffix: '',
-                ),
+                      suffix: '',
+                    ),
                     _ResourceItem(
                       emoji: '📈',
-                      value: _formatNumber(nation.totalGoldIncome),
+                      value: _formatNumber(nation.getTotalGoldIncome(provinces)),
                       suffix: '/month',
                     ),
-                _ResourceItem(
-                  emoji: '👥',
-                  value: _formatNumber(nation.totalPopulation),
-                  suffix: '',
-                ),
+                    _ResourceItem(
+                      emoji: '👥',
+                      value: _formatNumber(nation.getTotalPopulation(provinces)),
+                      suffix: '',
+                    ),
                     _ResourceItem(
                       emoji: '⚔️',
-                      value: _formatNumber(nation.totalArmy),
+                      value: _formatNumber(nation.getTotalArmy(provinces)),
                       suffix: '',
                     ),
                   ],
@@ -106,24 +108,24 @@ class ResourceBar extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                _ResourceItem(
-                  emoji: '🏭',
-                  value: _formatNumber(nation.totalIndustry),
-                  suffix: '',
-                ),
-                _ResourceItem(
+                    _ResourceItem(
+                      emoji: '🏭',
+                      value: _formatNumber(nation.getTotalIndustry(provinces)),
+                      suffix: '',
+                    ),
+                    _ResourceItem(
                       emoji: '⛏️',
-                      value: _formatNumber(nation.resourceCounts[ResourceType.coal] ?? 0),
+                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.coal] ?? 0),
                       suffix: 'coal',
                     ),
                     _ResourceItem(
                       emoji: '⚒️',
-                      value: _formatNumber(nation.resourceCounts[ResourceType.iron] ?? 0),
+                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.iron] ?? 0),
                       suffix: 'iron',
                     ),
                     _ResourceItem(
                       emoji: '🌾',
-                      value: _formatNumber(nation.resourceCounts[ResourceType.food] ?? 0),
+                      value: _formatNumber(nation.getResourceCounts(provinces)[ResourceType.food] ?? 0),
                       suffix: 'food',
                     ),
                   ],
