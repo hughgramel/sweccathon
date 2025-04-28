@@ -4,12 +4,12 @@ import '../models/game_types.dart';
 class ProvinceDetailsPopup extends StatelessWidget {
   final Province province;
   final Nation? ownerNation;
-  final Function(int armyChange, int industryChange)? onRecruitArmy;
+  final Function(int, int)? onRecruitArmy;
 
   const ProvinceDetailsPopup({
     super.key,
     required this.province,
-    this.ownerNation,
+    required this.ownerNation,
     this.onRecruitArmy,
   });
 
@@ -51,7 +51,7 @@ class ProvinceDetailsPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -63,103 +63,184 @@ class ProvinceDetailsPopup extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Province info section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   province.name,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (ownerNation != null)
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
-                        width: 24,
-                        height: 18,
-                        fit: BoxFit.contain,
+                if (ownerNation != null) Row(
+                  children: [
+                    Image.asset(
+                      'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
+                      width: 32,
+                      height: 24,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      ownerNation!.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        ownerNation!.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Stats section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _StatItem(
+                  emoji: '👥',
+                  label: 'Population',
+                  value: _formatNumber(province.population),
+                ),
+                _StatItem(
+                  emoji: '💰',
+                  label: 'Income',
+                  value: _formatNumber(province.goldIncome),
+                ),
+                _StatItem(
+                  emoji: '🏭',
+                  label: 'Industry',
+                  value: _formatNumber(province.industry),
+                ),
+                _StatItem(
+                  emoji: '⚔️',
+                  label: 'Army',
+                  value: _formatNumber(province.army),
+                ),
+              ],
+            ),
+          ),
+          // Resource and buildings section
+          
+          // Bottom buttons
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    transform: Matrix4.translationValues(0, -2, 0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF67B9E7), // Light blue from reference
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xFF4792BA), // Darker blue from reference
+                          offset: Offset(0, 4),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          // Handle Info tap
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'ℹ️',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Info',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _DetailItem(
-                  emoji: '👥',
-                  value: _formatNumber(province.population),
-                  label: 'Population',
-                ),
-                _DetailItem(
-                  emoji: '💰',
-                  value: _formatNumber(province.goldIncome),
-                  label: 'Income',
-                ),
-                _DetailItem(
-                  emoji: '🏭',
-                  value: _formatNumber(province.industry),
-                  label: 'Industry',
-                ),
-                _DetailItem(
-                  emoji: '⚔️',
-                  value: _formatNumber(province.army),
-                  label: 'Army',
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _DetailItem(
-                  emoji: _getResourceEmoji(province.resourceType),
-                  value: province.resourceType.toString().split('.').last,
-                  label: 'Resource',
-                ),
-                _DetailItem(
-                  emoji: '🏛️',
-                  value: province.buildings.length.toString(),
-                  label: 'Buildings',
-                ),
-                if (onRecruitArmy != null && province.industry >= 10)
-                  TextButton.icon(
-                    onPressed: () => onRecruitArmy!(5000, -10),
-                    icon: const Text('⚔️', style: TextStyle(fontSize: 16)),
-                    label: const Text(
-                      'Recruit Army\n(-10 Industry)',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12),
                     ),
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.blue.shade50,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    transform: Matrix4.translationValues(0, -2, 0),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6EC53E), // Light green from reference
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xFF59A700), // Darker green from reference
+                          offset: Offset(0, 4),
+                          blurRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          // Handle Buildings tap
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '🏛️',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Buildings',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -180,26 +261,25 @@ class ProvinceDetailsPopup extends StatelessWidget {
   }
 }
 
-class _DetailItem extends StatelessWidget {
+class _StatItem extends StatelessWidget {
   final String emoji;
-  final String value;
   final String label;
+  final String value;
 
-  const _DetailItem({
+  const _StatItem({
     required this.emoji,
-    required this.value,
     required this.label,
+    required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 16)),
+            Text(emoji, style: const TextStyle(fontSize: 18)),
             const SizedBox(width: 4),
             Text(
               value,
@@ -210,12 +290,11 @@ class _DetailItem extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            color: Colors.black54,
+            color: Colors.black.withOpacity(0.6),
           ),
         ),
       ],

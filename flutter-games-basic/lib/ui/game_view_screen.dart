@@ -6,6 +6,7 @@ import '../data/world_1836.dart';
 // import '../widgets/interactive_map.dart';
 import '../widgets/resource_bar.dart';
 import '../services/game_persistence_service.dart';
+import '../widgets/popup.dart';
 
 class GameViewScreen extends StatefulWidget {
   final Game game;
@@ -30,6 +31,49 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   bool _isTransitioning = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
+  Province? selectedProvince;
+
+  String _formatNumber(num number) {
+    if (number == 0) return "0";
+    
+    bool isNegative = number < 0;
+    number = number.abs();
+    
+    final suffixes = ["", "k", "m", "b", "t"];
+    
+    int suffixIndex = 0;
+    while (number >= 1000 && suffixIndex < suffixes.length - 1) {
+      number /= 1000;
+      suffixIndex++;
+    }
+    
+    String formatted;
+    if (number >= 100) {
+      formatted = number.round().toString();
+    } else if (number >= 10) {
+      formatted = number.toStringAsFixed(1);
+      if (formatted.endsWith('.0')) {
+        formatted = formatted.substring(0, formatted.length - 2);
+      }
+    } else {
+      formatted = number.toStringAsFixed(2);
+      if (formatted.endsWith('0')) {
+        formatted = formatted.substring(0, formatted.length - 1);
+        if (formatted.endsWith('.0')) {
+          formatted = formatted.substring(0, formatted.length - 2);
+        }
+      }
+    }
+    
+    return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
+  }
+
+  String _formatDate(int days) {
+    final startDate = DateTime(1836, 1, 1);
+    final date = startDate.add(Duration(days: days));
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
 
   @override
   void initState() {
@@ -203,6 +247,26 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
     });
   }
 
+  void _showActionPopup(BuildContext context, String action) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Popup(
+          title: action,
+          width: 600,
+          height: 700,
+          onClose: () => Navigator.of(context).pop(),
+          content: Center(
+            child: Text(
+              '$action Content Coming Soon',
+              style: const TextStyle(fontSize: 18),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     print('GameViewScreen build');
@@ -235,10 +299,9 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
         backgroundColor: Colors.white,
         body: Stack(
           children: [
-            // Bottom layer: Grid background
-            CustomPaint(
-              size: Size.infinite,
-              painter: GridPainter(),
+            // Bottom layer: Background
+            Container(
+              color: const Color.fromRGBO(143, 178, 187, 1.0),
             ),
 
             // Second layer: Interactive map
@@ -246,34 +309,77 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
               game: currentGame,
               onGameUpdate: _handleGameUpdate,
             ),
+            
             // Top layers: UI elements
             Column(
               children: [
-                // Top bar with resource bar
+                // Top bar with resource bar and date
                 SafeArea(
-                  child: Column(
-                    children: [
-                      ResourceBar(
-                        nation: currentGame.playerNation,
-                        provinces: currentGame.provinces,
-                      ),
-                      // Date box
-                      Container(
-                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              offset: const Offset(0, 2),
-                              blurRadius: 3,
-                            ),
-                          ],
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          offset: const Offset(0, 2),
+                          blurRadius: 3,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          child: Row(
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _ResourceItem(
+                                      emoji: '💰',
+                                      value: _formatNumber(currentGame.playerNation.gold),
+                                    ),
+                                    _ResourceItem(
+                                      emoji: '👥',
+                                      value: _formatNumber(currentGame.playerNation.getTotalPopulation(currentGame.provinces)),
+                                    ),
+                                    _ResourceItem(
+                                      emoji: '🏭',
+                                      value: _formatNumber(currentGame.playerNation.getTotalIndustry(currentGame.provinces)),
+                                    ),
+                                    _ResourceItem(
+                                      emoji: '⚔️',
+                                      value: _formatNumber(currentGame.playerNation.getTotalArmy(currentGame.provinces)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Menu button
+                              Container(
+                                margin: const EdgeInsets.only(left: 12),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(8),
+                                    onTap: () => _showMenuModal(context),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4),
+                                      child: Icon(
+                                        Icons.menu,
+                                        color: Colors.black87,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Row(
@@ -286,7 +392,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    currentGame.formattedDate,
+                                    _formatDate(currentGame.date),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
@@ -294,102 +400,104 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                   ),
                                 ],
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    currentGame = currentGame.incrementDate();
-                                  });
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                              Container(
+                                transform: Matrix4.translationValues(0, -2, 0),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF67B9E7),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0xFF4792BA),
+                                      offset: Offset(0, 4),
+                                      blurRadius: 0,
+                                    ),
+                                  ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      setState(() {
+                                        currentGame = currentGame.incrementDate();
+                                      });
+                                    },
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      child: Text(
+                                        'Tick',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: const Text('Tick'),
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-        floatingActionButton: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(0, 2),
-                      blurRadius: 3,
+            
+            // Left side action buttons
+            if (selectedProvince == null) 
+              Positioned(
+                left: 16,
+                top: MediaQuery.of(context).padding.top + 105, // Below top bar
+                child: Column(
+                  children: [
+                    _ActionButton(
+                      label: '',
+                      icon: Icons.build,
+                      color: const Color(0xFF6EC53E),
+                      shadowColor: const Color(0xFF4A9E1C),
+                      onPressed: () => _showActionPopup(context, 'Build'),
+                    ),
+                    const SizedBox(height: 8),
+                    _ActionButton(
+                      label: '',
+                      icon: Icons.science,
+                      color: const Color(0xFF67B9E7),
+                      shadowColor: const Color(0xFF4792BA),
+                      onPressed: () => _showActionPopup(context, 'Research'),
+                    ),
+                    const SizedBox(height: 8),
+                    _ActionButton(
+                      label: '',
+                      icon: Icons.security,
+                      color: const Color(0xFFE76767),
+                      shadowColor: const Color(0xFFBA4747),
+                      onPressed: () => _showActionPopup(context, 'Army'),
+                    ),
+                    const SizedBox(height: 8),
+                    _ActionButton(
+                      label: '',
+                      icon: Icons.track_changes,
+                      color: const Color(0xFF3E8C5E),
+                      shadowColor: const Color(0xFF2A6B42),
+                      onPressed: () => _showActionPopup(context, 'Focus'),
+                    ),
+                    const SizedBox(height: 8),
+                    _ActionButton(
+                      label: '',
+                      icon: Icons.menu_book,
+                      color: const Color(0xFF677CE7),
+                      shadowColor: const Color(0xFF4759BA),
+                      onPressed: () => _showActionPopup(context, 'Diplomacy'),
                     ),
                   ],
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _showMenuModal(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      child: const Icon(
-                        Icons.menu,
-                        color: Colors.black87,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      offset: const Offset(0, 2),
-                      blurRadius: 3,
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: _addGold,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      child: const Icon(
-                        Icons.monetization_on,
-                        color: Colors.black87,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       ),
     );
   }
@@ -424,4 +532,84 @@ class GridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(GridPainter oldDelegate) => false;
+}
+
+class _ResourceItem extends StatelessWidget {
+  final String emoji;
+  final String value;
+
+  const _ResourceItem({
+    required this.emoji,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w500,
+            fontSize: 17,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color shadowColor;
+  final VoidCallback onPressed;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.shadowColor,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      transform: Matrix4.translationValues(0, -2, 0),
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            offset: const Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Center(
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 } 

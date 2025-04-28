@@ -363,7 +363,7 @@ class RegionBorderPainter extends CustomPainter {
   RegionBorderPainter({super.repaint, required this.path}) {
     borderPaint = Paint()
       ..color = Colors.black
-      ..strokeWidth = 0.05
+      ..strokeWidth = 0.02
       ..style = PaintingStyle.stroke;
   }
 
