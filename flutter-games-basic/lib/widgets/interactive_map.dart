@@ -11,6 +11,7 @@ import 'package:path_drawing/path_drawing.dart';
 import 'province_details_popup.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
+import 'dart:math';
 
 
 class InteractiveMap extends StatefulWidget {
@@ -31,6 +32,10 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   List<Region> regions = [];
   Region? selectedRegion;
   bool _isLoading = true;
+  bool _showProvinceDetails = false;
+  bool _isMovementMode = false;
+  String? _movementOriginId;
+  DateTime? _lastTapTime;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   final Map<String, Path> _cachedPaths = {};
@@ -221,6 +226,233 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     widget.onGameUpdate(updatedGame);
   }
 
+  void _startMovement() {
+    if (selectedRegion == null) return;
+    
+    final province = _getProvinceForRegion(selectedRegion!.id);
+    if (!_canSelectProvince(province)) return;
+    
+    setState(() {
+      _isMovementMode = true;
+      _showProvinceDetails = false;
+      _movementOriginId = selectedRegion?.id;
+    });
+  }
+
+  void _cancelMovement() {
+    setState(() {
+      _isMovementMode = false;
+      _movementOriginId = null;
+    });
+  }
+
+  void _handleMovement(String destinationId) {
+    if (_movementOriginId == null) return;
+    
+    final originProvince = _getProvinceForRegion(_movementOriginId!);
+    final destProvince = _getProvinceForRegion(destinationId);
+    
+    if (!_canSelectProvince(originProvince) || !_canMoveToProvince(destProvince)) return;
+    
+    final originPath = _cachedPaths[_movementOriginId];
+    final destPath = _cachedPaths[destinationId];
+    if (originPath != null && destPath != null) {
+      final daysRequired = calculateMovementDays(
+        originPath.getBounds().center,
+        destPath.getBounds().center,
+      );
+      _startMovementToProvince(destinationId, daysRequired);
+    }
+  }
+
+  String? _getMovementInfo(String provinceId) {
+    for (final nation in widget.game.nations) {
+      final movement = nation.movements.firstWhere(
+        (m) => m.originProvinceId == provinceId,
+        orElse: () => Movement(
+          originProvinceId: '',
+          destinationProvinceId: '',
+          daysLeft: 0,
+          armySize: 0,
+        ),
+      );
+      if (movement.originProvinceId.isNotEmpty) {
+        final destProvince = widget.game.provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
+        return 'Moving to ${destProvince.name} in ${movement.daysLeft} days';
+      }
+    }
+    return null;
+  }
+
+  int _getEffectiveArmySize(String provinceId) {
+    final province = _getProvinceForRegion(provinceId);
+    
+    // Include armies that are in the process of moving
+    for (final nation in widget.game.nations) {
+      final movement = nation.movements.firstWhere(
+        (m) => m.originProvinceId == provinceId,
+        orElse: () => Movement(
+          originProvinceId: '',
+          destinationProvinceId: '',
+          daysLeft: 0,
+          armySize: 0,
+        ),
+      );
+      if (movement.originProvinceId.isNotEmpty) {
+        return movement.armySize;  // Show the moving army size
+      }
+    }
+    return province.army;  // Return actual army size if no movement
+  }
+
+  int _getRemainingDays(String provinceId) {
+    for (final nation in widget.game.nations) {
+      final movement = nation.movements.firstWhere(
+        (m) => m.originProvinceId == provinceId,
+        orElse: () => Movement(
+          originProvinceId: '',
+          destinationProvinceId: '',
+          daysLeft: 0,
+          armySize: 0,
+        ),
+      );
+      if (movement.originProvinceId.isNotEmpty) {
+        return movement.daysLeft;
+      }
+    }
+    return 0;
+  }
+
+  // Add movement speed calculation
+  int calculateMovementDays(Offset start, Offset end) {
+    final dx = end.dx - start.dx;
+    final dy = end.dy - start.dy;
+    final distance = sqrt(dx * dx + dy * dy);
+    // Use a multiplier of 5 days per unit of distance
+    return max(1, (distance * 5).round());
+  }
+
+  bool _canSelectProvince(Province province) {
+    return province.owner == widget.game.playerNationTag;
+  }
+
+  bool _canMoveToProvince(Province targetProvince) {
+    if (targetProvince.owner == widget.game.playerNationTag) {
+      return true;  // Can always move to own provinces
+    }
+    
+    // Check if the owner is an ally
+    final playerNation = widget.game.nations.firstWhere(
+      (n) => n.nationTag == widget.game.playerNationTag,
+    );
+    
+    return playerNation.allies.contains(targetProvince.owner);
+  }
+
+  void _handleRegionTap(String? regionId) {
+    if (regionId == null) {
+      setState(() {
+        selectedRegion = null;
+        _showProvinceDetails = false;
+      });
+      return;
+    }
+
+    final targetProvince = _getProvinceForRegion(regionId);
+    
+    final now = DateTime.now();
+    final isDoubleTap = _lastTapTime != null && 
+        now.difference(_lastTapTime!) < const Duration(milliseconds: 300);
+    _lastTapTime = now;
+
+    if (isDoubleTap && selectedRegion != null && regionId != selectedRegion!.id) {
+      // Handle double tap movement
+      final originProvince = _getProvinceForRegion(selectedRegion!.id);
+      if (originProvince.army > 0 && _canSelectProvince(originProvince) && _canMoveToProvince(targetProvince)) {
+        final originPath = _cachedPaths[selectedRegion!.id];
+        final destPath = _cachedPaths[regionId];
+        if (originPath != null && destPath != null) {
+          final daysRequired = calculateMovementDays(
+            originPath.getBounds().center,
+            destPath.getBounds().center,
+          );
+          _startMovementToProvince(regionId, daysRequired);
+        }
+      }
+    } else {
+      setState(() {
+        if (_isMovementMode) {
+          if (_canMoveToProvince(targetProvince)) {
+            _handleMovement(regionId);
+          }
+        } else {
+          if (_canSelectProvince(targetProvince)) {
+            selectedRegion = Region(id: regionId, path: '');
+            _showProvinceDetails = false;
+          }
+        }
+      });
+    }
+  }
+
+  void _startMovementToProvince(String destinationId, int daysRequired) {
+    if (selectedRegion == null) return;
+    
+    final originProvince = _getProvinceForRegion(selectedRegion!.id);
+    if (originProvince.army <= 0) return;
+
+    final updatedNations = widget.game.nations.map((nation) {
+      if (nation.nationTag == widget.game.playerNationTag) {
+        return nation.copyWith(
+          movements: [
+            ...nation.movements,
+            Movement(
+              originProvinceId: selectedRegion!.id,
+              destinationProvinceId: destinationId,
+              daysLeft: daysRequired,
+              armySize: originProvince.army,
+            ),
+          ],
+        );
+      }
+      return nation;
+    }).toList();
+
+    final updatedProvinces = widget.game.provinces.map((p) {
+      if (p.id == selectedRegion!.id) {
+        return Province(
+          id: p.id,
+          name: p.name,
+          path: p.path,
+          population: p.population,
+          goldIncome: p.goldIncome,
+          industry: p.industry,
+          buildings: p.buildings,
+          resourceType: p.resourceType,
+          army: 0,
+          owner: p.owner,
+        );
+      }
+      return p;
+    }).toList();
+
+    final updatedGame = Game(
+      id: widget.game.id,
+      gameName: widget.game.gameName,
+      date: widget.game.date,
+      mapName: widget.game.mapName,
+      playerNationTag: widget.game.playerNationTag,
+      nations: updatedNations,
+      provinces: updatedProvinces,
+    );
+
+    widget.onGameUpdate(updatedGame);
+    setState(() {
+      _isMovementMode = false;
+      selectedRegion = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -259,7 +491,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               maxScale: 20.0,
               constrained: false,
               onInteractionUpdate: (details) {
-                // Trigger rebuild when scale changes
                 setState(() {});
               },
               child: RepaintBoundary(
@@ -270,36 +501,254 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     cachedPaths: _cachedPaths,
                     cachedColors: _cachedColors,
                     selectedRegionId: selectedRegion?.id,
-                    onRegionSelected: (regionId) {
-                      setState(() {
-                        selectedRegion = regionId != null 
-                            ? Region(id: regionId, path: '') 
-                            : null;
-                      });
-                    },
+                    onRegionSelected: _handleRegionTap,
                     game: widget.game,
                     scale: currentScale,
                     flagImages: flagImages,
+                    isMovementMode: _isMovementMode,
+                    movementOriginId: _movementOriginId,
                   ),
                 ),
               ),
             ),
           ),
-          if (selectedProvince != null && selectedProvince.id.isNotEmpty)
+          
+          
+          if (selectedRegion != null && selectedProvince != null && selectedProvince.id.isNotEmpty)
+            
             Positioned(
               left: 0,
               right: 0,
-              bottom: 0,
-              child: ProvinceDetailsPopup(
-                province: selectedProvince,
-                ownerNation: selectedNation,
-                onRecruitArmy: selectedProvince.army >= 10 
-                  ? (armyChange, industryChange) => _handleRecruitArmy(
-                      selectedProvince.id,
-                      armyChange,
-                      industryChange,
-                    )
-                  : null,
+              bottom: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (!_showProvinceDetails && !_isMovementMode)
+
+                    Container(
+                      transform: Matrix4.translationValues(0, -2, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (!_isMovementMode && !_showProvinceDetails) ...[
+                                Expanded(
+                                  child: Opacity(
+                                    opacity: _getEffectiveArmySize(selectedProvince.id) > 0 && 
+                                            _canSelectProvince(selectedProvince) &&
+                                            selectedProvince.owner == widget.game.playerNationTag ? 1.0 : 0.0,
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                                      transform: Matrix4.translationValues(0, -2, 0),
+                                      decoration: BoxDecoration(
+                                        color: _getMovementInfo(selectedProvince.id) != null 
+                                          ? const Color(0xFFE57373) // Light red for cancel
+                                          : const Color(0xFF6EC53E), // Light green for move
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: _getMovementInfo(selectedProvince.id) != null
+                                              ? const Color(0xFFC62828) // Darker red for cancel
+                                              : const Color(0xFF59A700), // Darker green for move
+                                            offset: const Offset(0, 4),
+                                            blurRadius: 0,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(12),
+                                          onTap: _getEffectiveArmySize(selectedProvince.id) > 0
+                                            ? (_getMovementInfo(selectedProvince.id) != null 
+                                              ? _cancelMovement 
+                                              : _startMovement)
+                                            : null,
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _getMovementInfo(selectedProvince.id) != null
+                                                    ? 'Stop (${_getRemainingDays(selectedProvince.id)}d)'
+                                                    : 'Move',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    transform: Matrix4.translationValues(0, -2, 0),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFA726), // Light orange
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0xFFF57C00), // Darker orange
+                                          offset: Offset(0, 4),
+                                          blurRadius: 0,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () {
+                                          // Add recruit functionality
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'Recruit',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+
+
+
+                                Expanded(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    transform: Matrix4.translationValues(0, -2, 0),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF67B9E7), // Light blue
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0xFF4792BA), // Darker blue
+                                          offset: Offset(0, 4),
+                                          blurRadius: 0,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () {
+                                          setState(() {
+                                            _showProvinceDetails = true;
+                                          });
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'Details',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (_isMovementMode)
+                                Expanded(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    transform: Matrix4.translationValues(0, -2, 0),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE57373), // Light red
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0xFFC62828), // Darker red
+                                          offset: Offset(0, 4),
+                                          blurRadius: 0,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: _cancelMovement,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                'Stop (10d)',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_showProvinceDetails)
+                    ProvinceDetailsPopup(
+                      province: selectedProvince,
+                      ownerNation: selectedNation,
+                      onRecruitArmy: selectedProvince.army >= 10 
+                        ? (armyChange, industryChange) => _handleRecruitArmy(
+                            selectedProvince.id,
+                            armyChange,
+                            industryChange,
+                          )
+                        : null,
+                      onClose: () {
+                        setState(() {
+                          _showProvinceDetails = false;
+                        });
+                      },
+                    ),
+                ],
               ),
             ),
         ],
@@ -317,12 +766,15 @@ class MapPainter extends CustomPainter {
   final Game game;
   final double scale;
   final Map<String, ui.Image> flagImages;
+  final bool isMovementMode;
+  final String? movementOriginId;
 
   final List<({
     TextPainter painter,
     Offset offset,
     Rect bgRect,
     String nationTag,
+    bool isSelected,
   })> deferredText = [];
 
   MapPainter({
@@ -334,7 +786,44 @@ class MapPainter extends CustomPainter {
     required this.game,
     required this.scale,
     required this.flagImages,
+    required this.isMovementMode,
+    required this.movementOriginId,
   });
+
+  int _getEffectiveArmySize(String provinceId) {
+    final province = game.provinces.firstWhere(
+      (p) => p.id == provinceId,
+      orElse: () => Province(
+        id: '',
+        name: '',
+        path: '',
+        population: 0,
+        goldIncome: 0,
+        industry: 0,
+        buildings: [],
+        resourceType: ResourceType.none,
+        army: 0,
+        owner: '',
+      ),
+    );
+    
+    // Include armies that are in the process of moving
+    for (final nation in game.nations) {
+      final movement = nation.movements.firstWhere(
+        (m) => m.originProvinceId == provinceId,
+        orElse: () => Movement(
+          originProvinceId: '',
+          destinationProvinceId: '',
+          daysLeft: 0,
+          armySize: 0,
+        ),
+      );
+      if (movement.originProvinceId.isNotEmpty) {
+        return movement.armySize;  // Show the moving army size
+      }
+    }
+    return province.army;  // Return actual army size if no movement
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -345,11 +834,6 @@ class MapPainter extends CustomPainter {
       ..color = Colors.black
       ..strokeWidth = 0.05
       ..style = PaintingStyle.stroke;
-
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-    );
 
     deferredText.clear();
 
@@ -378,7 +862,9 @@ class MapPainter extends CustomPainter {
           ),
         );
 
-        if (province.army > 0) {
+        final effectiveArmy = _getEffectiveArmySize(region.id);
+        
+        if (effectiveArmy > 0) {
           // Get the owning nation of this province
           final ownerNation = game.nations.firstWhere(
             (n) => n.nationTag == province.owner,
@@ -418,8 +904,6 @@ class MapPainter extends CustomPainter {
               isAI: false,
             ),
           );
-          print('playerNation: ${playerNation.name}');
-          print('ownerNation: ${ownerNation.name}');
 
           // Only show armies if:
           // 1. Province is owned by an ally (including player's own nation)
@@ -427,14 +911,13 @@ class MapPainter extends CustomPainter {
           final isAllied = ownerNation.nationTag == playerNation.nationTag || 
                          playerNation.allies.contains(ownerNation.nationTag);
           final isBorderProvince = playerNation.borderProvinces.contains(province.id) || ownerNation.borderProvinces.contains(province.id);
-          print('playerNation.borderProvinces: ${playerNation.borderProvinces}');
-          print('ownerNation.borderProvinces: ${ownerNation.borderProvinces}');
+          
           if (isAllied || isBorderProvince) {
             final bounds = path.getBounds();
             final center = bounds.center;
             
             // Format army number divided by 1000
-            final armyInK = province.army / 1000.0;
+            final armyInK = effectiveArmy / 1000.0;
             String formattedNumber;
             
             if (armyInK < 1) {
@@ -460,7 +943,6 @@ class MapPainter extends CustomPainter {
               text: textSpan,
               textDirection: TextDirection.ltr,
               textAlign: TextAlign.left,
-
             );
             
             provincePainter.layout(maxWidth: double.infinity);
@@ -486,29 +968,87 @@ class MapPainter extends CustomPainter {
               ),
               bgRect: bgRect,
               nationTag: province.owner.toLowerCase(),
+              isSelected: region.id == selectedRegionId,
             ));
           }
         }
       }
     }
 
-    // Second pass: Draw all text boxes and text
+    // Draw movement arrows
+    final movementPaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..strokeWidth = 0.15
+      ..style = PaintingStyle.stroke;
+
+    // Draw existing movements
+    for (final nation in game.nations) {
+      final isPlayerNation = nation.nationTag == game.playerNationTag;
+      final canSeeMovements = isPlayerNation || 
+        game.playerNation.allies.contains(nation.nationTag) ||
+        nation.borderProvinces.any((p) => game.playerNation.nationProvinces.contains(p));
+
+      if (canSeeMovements) {
+        for (final movement in nation.movements) {
+          final originPath = cachedPaths[movement.originProvinceId];
+          final destPath = cachedPaths[movement.destinationProvinceId];
+          
+          if (originPath != null && destPath != null) {
+            final originBounds = originPath.getBounds();
+            final destBounds = destPath.getBounds();
+            
+            _drawDottedArrow(
+              canvas,
+              originBounds.center,
+              destBounds.center,
+              movementPaint,
+            );
+          }
+        }
+      }
+    }
+
+    // Draw movement preview if in movement mode
+    if (isMovementMode && movementOriginId != null) {
+      final originPath = cachedPaths[movementOriginId];
+      if (originPath != null) {
+        final originBounds = originPath.getBounds();
+        
+        // Draw preview to mouse position or selected province
+        if (selectedRegionId != null && selectedRegionId != movementOriginId) {
+          final destPath = cachedPaths[selectedRegionId];
+          if (destPath != null) {
+            final destBounds = destPath.getBounds();
+            _drawDottedArrow(
+              canvas,
+              originBounds.center,
+              destBounds.center,
+              movementPaint,
+            );
+          }
+        }
+      }
+    }
+
+    // Draw army displays last
     if (shouldRenderText) {
       for (final textItem in deferredText) {
         // Draw background rectangle with smaller radius
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             textItem.bgRect,
-            Radius.circular(textItem.bgRect.height * 0.15), // Smaller corner radius
+            Radius.circular(textItem.bgRect.height * 0.15),
           ),
-          Paint()..color = Colors.black.withOpacity(0.6),
+          Paint()..color = textItem.isSelected 
+            ? Colors.blue.withOpacity(0.8) 
+            : Colors.black.withOpacity(0.6),
         );
 
         // Draw flag on the left side with adjusted proportions
         final flagRect = Rect.fromLTWH(
-          textItem.bgRect.left + textItem.bgRect.height * 0.08, // Slightly less padding
+          textItem.bgRect.left + textItem.bgRect.height * 0.08,
           textItem.bgRect.top + textItem.bgRect.height * 0.15,
-          textItem.bgRect.height * 0.7, // Slightly smaller flag
+          textItem.bgRect.height * 0.7,
           textItem.bgRect.height * 0.7,
         );
 
@@ -531,6 +1071,67 @@ class MapPainter extends CustomPainter {
         textItem.painter.paint(canvas, textItem.offset);
       }
     }
+  }
+
+  void _drawDottedArrow(Canvas canvas, Offset start, Offset end, Paint paint) {
+    // Calculate direction vector
+    final dx = end.dx - start.dx;
+    final dy = end.dy - start.dy;
+    final distance = sqrt(dx * dx + dy * dy);
+    
+    // Normalize direction vector
+    final dirX = dx / distance;
+    final dirY = dy / distance;
+
+    // Calculate where to stop the line (slightly before the end)
+    final arrowSize = 0.8;  // Smaller arrow head
+    final lineEndDistance = distance - arrowSize;
+    
+    // Draw dotted line
+    final dashLength = 0.2;  // Tiny dashes
+    final gapLength = 0.2;   // Tiny gaps
+    var currentDistance = 0.0;
+    
+    paint.strokeWidth = 0.15;  // Even thinner line
+    
+    while (currentDistance < lineEndDistance) {
+      final startPoint = Offset(
+        start.dx + dirX * currentDistance,
+        start.dy + dirY * currentDistance,
+      );
+      
+      final endPoint = Offset(
+        start.dx + dirX * min(currentDistance + dashLength, lineEndDistance),
+        start.dy + dirY * min(currentDistance + dashLength, lineEndDistance),
+      );
+      
+      canvas.drawLine(startPoint, endPoint, paint);
+      currentDistance += dashLength + gapLength;
+    }
+
+    // Draw tiny arrow at the end
+    final perpX = -dirY;
+    final perpY = dirX;
+    
+    final arrowTip = end;
+    final arrowBase = Offset(
+      end.dx - dirX * arrowSize,
+      end.dy - dirY * arrowSize,
+    );
+    
+    final arrowPath = Path()
+      ..moveTo(arrowTip.dx, arrowTip.dy)
+      ..lineTo(
+        arrowBase.dx + perpX * arrowSize * 0.3,  // Reduced from 0.5 to 0.3 for thinner arrow head
+        arrowBase.dy + perpY * arrowSize * 0.3,
+      )
+      ..lineTo(
+        arrowBase.dx - perpX * arrowSize * 0.3,  // Reduced from 0.5 to 0.3 for thinner arrow head
+        arrowBase.dy - perpY * arrowSize * 0.3,
+      )
+      ..close();
+    
+    canvas.drawPath(arrowPath, paint..style = PaintingStyle.fill);
   }
 
   @override
@@ -556,7 +1157,7 @@ class MapPainter extends CustomPainter {
     if (!hitRegion) {
       onRegionSelected(null);
     }
-    return true; // Always return true to ensure we handle all clicks
+    return true;
   }
 }
 

@@ -48,7 +48,7 @@ class Province {
   final int army;  // Standing army in this province
   final String owner;  // Nation tag that owns this province
 
-  Province({
+  const Province({
     required this.id,
     required this.name,
     required this.path,
@@ -60,6 +60,60 @@ class Province {
     required this.army,
     required this.owner,
   });
+
+  Province copyWith({
+    String? id,
+    String? name,
+    String? path,
+    int? population,
+    int? goldIncome,
+    int? industry,
+    List<Building>? buildings,
+    ResourceType? resourceType,
+    int? army,
+    String? owner,
+  }) {
+    return Province(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      path: path ?? this.path,
+      population: population ?? this.population,
+      goldIncome: goldIncome ?? this.goldIncome,
+      industry: industry ?? this.industry,
+      buildings: buildings ?? this.buildings,
+      resourceType: resourceType ?? this.resourceType,
+      army: army ?? this.army,
+      owner: owner ?? this.owner,
+    );
+  }
+}
+
+class Movement {
+  final String originProvinceId;
+  final String destinationProvinceId;
+  final int daysLeft;
+  final int armySize;
+
+  const Movement({
+    required this.originProvinceId,
+    required this.destinationProvinceId,
+    required this.daysLeft,
+    required this.armySize,
+  });
+
+  Movement copyWith({
+    String? originProvinceId,
+    String? destinationProvinceId,
+    int? daysLeft,
+    int? armySize,
+  }) {
+    return Movement(
+      originProvinceId: originProvinceId ?? this.originProvinceId,
+      destinationProvinceId: destinationProvinceId ?? this.destinationProvinceId,
+      daysLeft: daysLeft ?? this.daysLeft,
+      armySize: armySize ?? this.armySize,
+    );
+  }
 }
 
 class Nation {
@@ -76,6 +130,7 @@ class Nation {
   final double currentResearchProgress;
   final List<QueuedBuild>? buildQueue;
   final bool isAI;
+  final List<Movement> movements;
 
   Nation({
     required this.nationTag,
@@ -91,6 +146,7 @@ class Nation {
     required this.currentResearchProgress,
     this.buildQueue,
     required this.isAI,
+    this.movements = const [],
   });
 
   Nation copyWith({
@@ -107,6 +163,7 @@ class Nation {
     double? currentResearchProgress,
     List<QueuedBuild>? buildQueue,
     bool? isAI,
+    List<Movement>? movements,
   }) {
     return Nation(
       nationTag: nationTag ?? this.nationTag,
@@ -122,6 +179,7 @@ class Nation {
       currentResearchProgress: currentResearchProgress ?? this.currentResearchProgress,
       buildQueue: buildQueue ?? this.buildQueue,
       isAI: isAI ?? this.isAI,
+      movements: movements ?? this.movements,
     );
   }
 
@@ -204,6 +262,7 @@ class Game {
             currentResearchProgress: nation.currentResearchProgress,
             buildQueue: nation.buildQueue,
             isAI: nation.isAI,
+            movements: nation.movements,
           );
         }
         return nation;
@@ -214,17 +273,52 @@ class Game {
 
   // Create a new game with an incremented date
   Game incrementDate() {
-    Game game = Game(
+    // Process movements
+    final updatedNations = nations.map((nation) {
+      final updatedMovements = <Movement>[];
+      var provincesToUpdate = <String, int>{};
+
+      // Process each movement
+      for (final movement in nation.movements) {
+        if (movement.daysLeft > 1) {
+          // Movement continues
+          updatedMovements.add(movement.copyWith(daysLeft: movement.daysLeft - 1));
+        } else {
+          // Movement completes
+          provincesToUpdate[movement.destinationProvinceId] = 
+            (provincesToUpdate[movement.destinationProvinceId] ?? 0) + movement.armySize;
+        }
+      }
+
+      // Update nation with new movements
+      return nation.copyWith(movements: updatedMovements);
+    }).toList();
+
+    // Update provinces with completed movements
+    final updatedProvinces = provinces.map((province) {
+      for (final nation in updatedNations) {
+        final completedMovements = nation.movements
+            .where((m) => m.daysLeft <= 1 && m.destinationProvinceId == province.id)
+            .toList();
+            
+        if (completedMovements.isNotEmpty) {
+          final totalIncomingArmy = completedMovements
+              .fold(0, (sum, movement) => sum + movement.armySize);
+              
+          return province.copyWith(army: province.army + totalIncomingArmy);
+        }
+      }
+      return province;
+    }).toList();
+
+    return Game(
       id: id,
       gameName: gameName,
       date: date + 1,
       mapName: mapName,
       playerNationTag: playerNationTag,
-      nations: nations,
-      provinces: provinces,
+      nations: updatedNations,
+      provinces: updatedProvinces,
     );
-    // Find player nation and add 100 gold
-    game = game.modifyNationGold(playerNationTag, 100);
-    return game;
   }
 } 

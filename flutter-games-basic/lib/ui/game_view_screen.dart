@@ -1,4 +1,4 @@
-import 'package:basic/widgets/interactive_map.dart';
+import 'package:clashofnations/widgets/interactive_map.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
@@ -450,7 +450,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                       });
                                     },
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 13),
                                   _SpeedButton(
                                     label: '2',
                                     isActive: !_isPaused && _currentSpeed == 2,
@@ -462,7 +462,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                       });
                                     },
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 13),
                                   _SpeedButton(
                                     label: '3',
                                     isActive: !_isPaused && _currentSpeed == 3,
@@ -474,7 +474,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                       });
                                     },
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 13),
                                   _SpeedButton(
                                     label: '4',
                                     isActive: !_isPaused && _currentSpeed == 4,
@@ -486,9 +486,11 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                       });
                                     },
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 13),
                                   Container(
                                     transform: Matrix4.translationValues(0, -2, 0),
+                                    width: 31,
+                                    height: 31,
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF67B9E7),
                                       borderRadius: BorderRadius.circular(12),
@@ -506,12 +508,12 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(12),
                                         onTap: _togglePause,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        child: Center(
                                           child: Text(
                                             _isPaused ? '▶' : '⏸',
                                             style: const TextStyle(
-                                              fontSize: 16,
+                                              color: Colors.white,
+                                              fontSize: 14,
                                             ),
                                           ),
                                         ),
@@ -714,6 +716,8 @@ class _SpeedButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       transform: Matrix4.translationValues(0, -2, 0),
+      width: 31,
+      height: 31,
       decoration: BoxDecoration(
         color: isSelected 
           ? const Color(0xFF67B9E7)  // Selected color
@@ -735,8 +739,7 @@ class _SpeedButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Center(
             child: Text(
               label,
               style: TextStyle(

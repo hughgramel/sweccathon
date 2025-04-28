@@ -5,12 +5,14 @@ class ProvinceDetailsPopup extends StatelessWidget {
   final Province province;
   final Nation? ownerNation;
   final Function(int, int)? onRecruitArmy;
+  final VoidCallback? onClose;
 
   const ProvinceDetailsPopup({
     super.key,
     required this.province,
     required this.ownerNation,
     this.onRecruitArmy,
+    this.onClose,
   });
 
   String _formatNumber(num number) {
@@ -51,196 +53,220 @@ class ProvinceDetailsPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
-            offset: const Offset(0, 2),
-            blurRadius: 3,
+            offset: const Offset(0, 4),
+            blurRadius: 8,
           ),
         ],
       ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-          // Province info section
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  province.name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: onClose,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: Colors.black54,
                   ),
                 ),
-                if (ownerNation != null) Row(
-                    children: [
-                      Image.asset(
-                        'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
-                      width: 32,
-                      height: 24,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        ownerNation!.name,
-                        style: const TextStyle(
-                        fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+              ),
             ),
           ),
-          // Stats section
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _StatItem(
-                  emoji: '👥',
-                  label: 'Population',
-                  value: _formatNumber(province.population),
-                ),
-                _StatItem(
-                  emoji: '💰',
-                  label: 'Income',
-                  value: _formatNumber(province.goldIncome),
-                ),
-                _StatItem(
-                  emoji: '🏭',
-                  label: 'Industry',
-                  value: _formatNumber(province.industry),
-                ),
-                _StatItem(
-                  emoji: '⚔️',
-                  label: 'Army',
-                  value: _formatNumber(province.army),
-                ),
-              ],
-            ),
-          ),
-          // Resource and buildings section
-          
-          // Bottom buttons
-          Container(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    transform: Matrix4.translationValues(0, -2, 0),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF67B9E7), // Light blue from reference
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0xFF4792BA), // Darker blue from reference
-                          offset: Offset(0, 4),
-                          blurRadius: 0,
-                ),
-                      ],
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Province info section
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      province.name,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          // Handle Info tap
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'ℹ️',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                ),
+                    if (ownerNation != null)
+                      Row(
+                        children: [
+                          Image.asset(
+                            'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
+                            width: 32,
+                            height: 24,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            ownerNation!.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              // Stats section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _StatItem(
+                      emoji: '👥',
+                      label: 'Population',
+                      value: _formatNumber(province.population),
+                    ),
+                    _StatItem(
+                      emoji: '💰',
+                      label: 'Income',
+                      value: _formatNumber(province.goldIncome),
+                    ),
+                    _StatItem(
+                      emoji: '🏭',
+                      label: 'Industry',
+                      value: _formatNumber(province.industry),
+                    ),
+                    _StatItem(
+                      emoji: '⚔️',
+                      label: 'Army',
+                      value: _formatNumber(province.army),
+                    ),
+                  ],
+                ),
+              ),
+              // Bottom buttons
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        transform: Matrix4.translationValues(0, -2, 0),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF67B9E7), // Light blue from reference
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFF4792BA), // Darker blue from reference
+                              offset: Offset(0, 4),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              // Handle Info tap
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'ℹ️',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Info',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Info',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    transform: Matrix4.translationValues(0, -2, 0),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6EC53E), // Light green from reference
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0xFF59A700), // Darker green from reference
-                          offset: Offset(0, 4),
-                          blurRadius: 0,
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        transform: Matrix4.translationValues(0, -2, 0),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6EC53E), // Light green from reference
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0xFF59A700), // Darker green from reference
+                              offset: Offset(0, 4),
+                              blurRadius: 0,
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          // Handle Buildings tap
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                '🏛️',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                ),
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              // Handle Buildings tap
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '🏛️',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Buildings',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Buildings',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
-                      ),
                     ),
-                  ),
-              ],
-            ),
-            ),
-          ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

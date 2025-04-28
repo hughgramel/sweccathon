@@ -70,21 +70,25 @@ class ResourceBar extends StatelessWidget {
               emoji: '💰',
               value: _formatNumber(nation.gold),
               suffix: '',
+              width: 120,
             ),
             _ResourceItem(
               emoji: '👥',
               value: _formatNumber(nation.getTotalPopulation(provinces)),
               suffix: '',
+              width: 120,
             ),
             _ResourceItem(
               emoji: '🏭',
               value: _formatNumber(nation.getTotalIndustry(provinces)),
               suffix: '',
+              width: 120,
             ),
             _ResourceItem(
               emoji: '⚔️',
               value: _formatNumber(nation.getTotalArmy(provinces)),
               suffix: '',
+              width: 120,
             ),
           ],
         ),
@@ -97,29 +101,35 @@ class _ResourceItem extends StatelessWidget {
   final String emoji;
   final String value;
   final String suffix;
+  final double width;
 
   const _ResourceItem({
     required this.emoji,
     required this.value,
     required this.suffix,
+    required this.width,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 6),
-        Text(
-          '$value$suffix',
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w500,
-            fontSize: 17,
+    return Container(
+      width: width,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 6),
+          Text(
+            '$value$suffix',
+            style: const TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+              fontSize: 17,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 } 
