@@ -278,6 +278,12 @@ class MapPainter extends CustomPainter {
   final Function(String?) onRegionSelected;
   final Game game;
 
+  // Store text rendering information
+  final List<({
+    TextPainter painter,
+    Offset offset,
+  })> deferredText = [];
+
   MapPainter({
     required this.regions,
     required this.cachedPaths,
@@ -299,6 +305,10 @@ class MapPainter extends CustomPainter {
       textAlign: TextAlign.center,
     );
 
+    // Clear any previous deferred text
+    deferredText.clear();
+
+    // First pass: Draw all provinces
     for (final region in regions) {
       final path = cachedPaths[region.id]!;
       final color = cachedColors[region.id]!;
@@ -313,7 +323,7 @@ class MapPainter extends CustomPainter {
       // Draw border
       canvas.drawPath(path, borderPaint);
 
-      // Draw army numbers
+      // Prepare text for deferred rendering
       final province = game.provinces.firstWhere(
         (p) => p.id == region.id,
         orElse: () => Province(
@@ -330,61 +340,59 @@ class MapPainter extends CustomPainter {
         ),
       );
 
-      if (province.army > 0) {
+      if (province.industry > 0) {
         final bounds = path.getBounds();
         final center = bounds.center;
         
-        // Format the number (e.g., 15000 -> "15k")
-        final formattedNumber = _formatNumber(province.army);
+        // Format the number more compactly
+        final formattedNumber = _formatNumber(province.industry);
         
-        // Calculate a size based on the province bounds
+        // Calculate font size
         final provinceSize = bounds.width.abs() * bounds.height.abs();
-        final fontSize = (provinceSize * 0.002).clamp(4.0, 10.0);
+        final fontSize = (provinceSize * 0.0003).clamp(1.2, 2.2);
         
-        textPainter.text = TextSpan(
-          text: formattedNumber,
+        // Create text span with spaces between digits
+        final textSpan = TextSpan(
+          text: formattedNumber.split('').join(' '),
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white, // White text
             fontSize: fontSize,
             fontWeight: FontWeight.w600,
-            backgroundColor: Colors.white.withOpacity(0.7),
+            letterSpacing: -fontSize * 0.2,
           ),
         );
         
-        textPainter.layout();
-        
-        // Ensure text fits within province bounds
-        final textBounds = Rect.fromCenter(
-          center: center,
-          width: textPainter.width,
-          height: textPainter.height,
+        // Create and measure text painter
+        final provincePainter = TextPainter(
+          text: textSpan,
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.center,
         );
         
-        if (path.contains(textBounds.topLeft) && 
-            path.contains(textBounds.topRight) &&
-            path.contains(textBounds.bottomLeft) &&
-            path.contains(textBounds.bottomRight)) {
-          
-          // Draw white background for better visibility
-          final bgRect = Rect.fromCenter(
-            center: center,
-            width: textPainter.width + 4,
-            height: textPainter.height,
-          );
-          canvas.drawRect(
-            bgRect,
-            Paint()..color = Colors.white.withOpacity(0.7),
-          );
-          
-          textPainter.paint(
-            canvas,
-            Offset(
-              center.dx - textPainter.width / 2,
-              center.dy - textPainter.height / 2,
-            ),
-          );
-        }
+        // Measure text
+        provincePainter.layout(maxWidth: double.infinity);
+        final requiredWidth = provincePainter.width;
+        
+        // Final layout
+        provincePainter.layout(
+          minWidth: requiredWidth,
+          maxWidth: requiredWidth,
+        );
+        
+        // Store for deferred rendering
+        deferredText.add((
+          painter: provincePainter,
+          offset: Offset(
+            center.dx - provincePainter.width / 2,
+            center.dy - provincePainter.height / 2,
+          ),
+        ));
       }
+    }
+
+    // Second pass: Draw all text
+    for (final textItem in deferredText) {
+      textItem.painter.paint(canvas, textItem.offset);
     }
   }
 
