@@ -31,72 +31,21 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   bool _isLoading = true;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-
-  // Helper method to convert hex color string to Color
-  Color _hexToColor(String hexString) {
-    final buffer = StringBuffer();
-    if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-    buffer.write(hexString.replaceFirst('#', ''));
-    return Color(int.parse(buffer.toString(), radix: 16));
-  }
-
-  // Helper method to get province color based on ownership
-  Color _getProvinceColor(String regionId) {
-    final province = _getProvinceForRegion(regionId);
-    if (province.id.isEmpty) {
-      return Colors.grey; // Default color for unowned provinces
-    }
-
-    final ownerNation = _getNationForProvince(province);
-    if (ownerNation == null) {
-      return Colors.grey; // Default color if owner not found
-    }
-
-    return _hexToColor(ownerNation.hexColor);
-  }
-
-  Province _getProvinceForRegion(String regionId) {
-    return widget.game.provinces.firstWhere(
-      (p) => p.id == regionId,
-      orElse: () => Province(
-        id: '',
-        name: '',
-        path: '',
-        population: 0,
-        goldIncome: 0,
-        industry: 0,
-        buildings: [],
-        resourceType: ResourceType.none,
-        army: 0,
-        owner: '',
-      ),
-    );
-  }
-
-  Nation? _getNationForProvince(Province province) {
-    if (province.owner.isEmpty) return null;
-    return widget.game.nations.firstWhere(
-      (n) => n.nationTag == province.owner,
-      orElse: () => Nation(
-        nationTag: '',
-        name: '',
-        color: '',
-        hexColor: '',
-        nationProvinces: [],
-        gold: 0,
-        researchPoints: 0,
-        currentResearchProgress: 0,
-        isAI: false,
-      ),
-    );
-  }
+  
+  // Cache for parsed paths and colors
+  final Map<String, Path> _pathCache = {};
+  final Map<String, Color> _colorCache = {};
+  final Map<String, Widget> _regionCache = {};
+  
+  // Cache for province and nation lookups
+  final Map<String, Province> _provinceCache = {};
+  final Map<String, Nation> _nationCache = {};
 
   @override
   void initState() {
     super.initState();
     print('InteractiveMap initState');
     
-    // Initialize fade controller
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -104,14 +53,114 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
     
-    print('Starting to load regions...');
     loadRegions();
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
+    _pathCache.clear();
+    _colorCache.clear();
+    _regionCache.clear();
+    _provinceCache.clear();
+    _nationCache.clear();
     super.dispose();
+  }
+
+  // Optimized province lookup with caching
+  Province _getProvinceForRegion(String regionId) {
+    return _provinceCache.putIfAbsent(regionId, () {
+      return widget.game.provinces.firstWhere(
+        (p) => p.id == regionId,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+        ),
+      );
+    });
+  }
+
+  // Optimized nation lookup with caching
+  Nation? _getNationForProvince(Province province) {
+    if (province.owner.isEmpty) return null;
+    return _nationCache.putIfAbsent(province.owner, () {
+      return widget.game.nations.firstWhere(
+        (n) => n.nationTag == province.owner,
+        orElse: () => Nation(
+          nationTag: '',
+          name: '',
+          color: '',
+          hexColor: '',
+          nationProvinces: [],
+          gold: 0,
+          researchPoints: 0,
+          currentResearchProgress: 0,
+          isAI: false,
+        ),
+      );
+    });
+  }
+
+  // Optimized color conversion with caching
+  Color _hexToColor(String hexString) {
+    return _colorCache.putIfAbsent(hexString, () {
+      final buffer = StringBuffer();
+      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
+      buffer.write(hexString.replaceFirst('#', ''));
+      return Color(int.parse(buffer.toString(), radix: 16));
+    });
+  }
+
+  // Optimized path parsing with caching
+  Path _parsePath(String svgPath) {
+    return _pathCache.putIfAbsent(svgPath, () => parseSvgPathData(svgPath));
+  }
+
+  // Optimized province color lookup with caching
+  Color _getProvinceColor(String regionId) {
+    final province = _getProvinceForRegion(regionId);
+    if (province.id.isEmpty) {
+      return Colors.grey;
+    }
+
+    final ownerNation = _getNationForProvince(province);
+    if (ownerNation == null) {
+      return Colors.grey;
+    }
+
+    return _hexToColor(ownerNation.hexColor);
+  }
+
+  // Optimized region widget creation with caching
+  Widget _getRegionWidget(Region region) {
+    return _regionCache.putIfAbsent(region.id, () {
+      final path = _parsePath(region.path);
+      final color = _getProvinceColor(region.id);
+      
+      return RepaintBoundary(
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              selectedRegion = region;
+            });
+          },
+          child: CustomPaint(
+            painter: RegionPainter(
+              path: path,
+              color: color,
+            ),
+          ),
+        ),
+      );
+    });
   }
 
   Future<void> loadRegions() async {
@@ -209,39 +258,21 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         children: [
           Center(
             child: InteractiveViewer(
-              boundaryMargin: EdgeInsets.all(8.0),
+              boundaryMargin: const EdgeInsets.all(8.0),
               minScale: 0.1,
               maxScale: 20.0,
               constrained: false,
-              child: Column(
-                children: [
-                  // Large box to be above the map
-                  Container(
-                    width: 1200,
-                    height: 200,
-                    color: const Color.fromARGB(255, 209, 229, 240),
+              child: RepaintBoundary(
+                child: Container(
+                  width: 1200,
+                  height: 880,
+                  color: const Color.fromARGB(255, 209, 229, 240),
+                  child: Stack(
+                    children: [
+                      ...regions.map((region) => _getRegionWidget(region)),
+                    ],
                   ),
-                  SizedBox(
-                    width: 1200,
-                    height: 480,
-                    child: Container(
-                      color: const Color.fromARGB(255, 209, 229, 240),
-                      child: Stack(
-                        children: [
-                          for (final region in regions)...{
-                            _getRegionImage(region),
-                            _getRegionBorder(region),
-                          }
-                        ],
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 1200,
-                    height: 200,
-                    color: const Color.fromARGB(255, 209, 229, 240),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -266,29 +297,36 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       ),
     );
   }
-
-  Widget _getRegionImage(Region region) {
-    return ClipPath(
-      clipper: RegionClipper(svgPath: region.path),
-      child: GestureDetector(
-        onTap: () {
-          print('Tapped on region ${region.id}');
-          setState(() {
-            selectedRegion = region;
-          });
-        },
-        child: Container(
-          color: _getProvinceColor(region.id),
-        ),
-      ),
-    );
-  }
 }
 
-Widget _getRegionBorder(Region region) {
-  return CustomPaint(
-    painter: RegionBorderPainter(path: parseSvgPathData(region.path)),
-  );
+// Optimized painter that combines color and border
+class RegionPainter extends CustomPainter {
+  final Path path;
+  final Color color;
+  final Paint fillPaint;
+  final Paint borderPaint;
+
+  RegionPainter({
+    required this.path,
+    required this.color,
+  }) : fillPaint = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill,
+        borderPaint = Paint()
+          ..color = Colors.black
+          ..strokeWidth = 0.05
+          ..style = PaintingStyle.stroke;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(RegionPainter oldDelegate) {
+    return oldDelegate.path != path || oldDelegate.color != color;
+  }
 }
 
 class Region {
