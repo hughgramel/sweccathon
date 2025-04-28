@@ -119,7 +119,7 @@ class Nation {
 class Game {
   final String id;
   final String gameName;
-  final String date;
+  final int date;
   final String mapName;
   final String playerNationTag;
   final List<Nation> nations;
@@ -136,6 +136,13 @@ class Game {
   });
 
   Nation get playerNation => nations.firstWhere((n) => n.nationTag == playerNationTag);
+
+  // Format the date as YYYY-MM-DD
+  String get formattedDate {
+    final startDate = DateTime(1836, 1, 1);
+    final currentDate = startDate.add(Duration(days: date));
+    return '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+  }
 
   /// Creates a new Game instance with modified gold for a nation
   Game modifyNationGold(String nationTag, int goldChange) {
@@ -165,5 +172,21 @@ class Game {
       }).toList(),
       provinces: provinces,
     );
+  }
+
+  // Create a new game with an incremented date
+  Game incrementDate() {
+    Game game = Game(
+      id: id,
+      gameName: gameName,
+      date: date + 1,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations,
+      provinces: provinces,
+    );
+    // Find player nation and add 100 gold
+    game = game.modifyNationGold(playerNationTag, 100);
+    return game;
   }
 } 

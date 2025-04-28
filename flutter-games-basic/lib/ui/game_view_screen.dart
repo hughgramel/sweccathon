@@ -194,7 +194,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
       currentGame = Game(
         id: 'game_${DateTime.now().millisecondsSinceEpoch}',
         gameName: 'New Game',
-        date: '1836-01-01',
+        date: 0,  // Start at day 0 (1836-01-01)
         mapName: 'world_provinces',
         playerNationTag: widget.nationTag,
         nations: [nation, ...world1836.nations.where((n) => n.nationTag != widget.nationTag)],
@@ -251,9 +251,70 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
               children: [
                 // Top bar with resource bar
                 SafeArea(
-                  child: ResourceBar(
-                    nation: currentGame.playerNation,
-                    provinces: currentGame.provinces,
+                  child: Column(
+                    children: [
+                      ResourceBar(
+                        nation: currentGame.playerNation,
+                        provinces: currentGame.provinces,
+                      ),
+                      // Date box
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(0, 2),
+                              blurRadius: 3,
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/flags/${currentGame.playerNationTag.toLowerCase()}.png',
+                                    width: 24,
+                                    height: 18,
+                                    fit: BoxFit.contain,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    currentGame.formattedDate,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    currentGame = currentGame.incrementDate();
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Text('Tick'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

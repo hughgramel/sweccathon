@@ -157,7 +157,7 @@ class GamePersistenceService {
     return Game(
       id: json['id'] as String,
       gameName: json['gameName'] as String,
-      date: json['date'] as String,
+      date: (json['date'] as num).toInt(),
       mapName: json['mapName'] as String,
       playerNationTag: json['playerNationTag'] as String,
       nations: (json['nations'] as List)

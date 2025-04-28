@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../style/game_button.dart';
 import '../models/game_types.dart';
-import '../data/world_1836.dart';
 import '../services/game_persistence_service.dart';
 
 class HomeScreen extends StatefulWidget {

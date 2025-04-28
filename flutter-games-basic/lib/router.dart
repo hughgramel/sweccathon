@@ -90,7 +90,7 @@ final router = GoRouter(
               final game = Game(
                 id: 'game_${DateTime.now().millisecondsSinceEpoch}',
                 gameName: 'New Game',
-                date: '1836-01-01',
+                date: 0,  // Start at day 0 (1836-01-01)
                 mapName: 'world_provinces',
                 playerNationTag: nationTag,
                 nations: [nation, ...world1836.nations.where((n) => n.nationTag != nationTag)],

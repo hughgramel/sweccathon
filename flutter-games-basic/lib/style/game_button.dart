@@ -22,14 +22,14 @@ class GameButton extends StatefulWidget {
   final Color shadowColor;
 
   const GameButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.emoji,
     required this.onPressed,
     this.disabled = false,
     this.backgroundColor = const Color(0xFF67b9e7),
     this.shadowColor = const Color(0xFF4792ba),
-  }) : super(key: key);
+  });
 
   @override
   State<GameButton> createState() => _GameButtonState();
