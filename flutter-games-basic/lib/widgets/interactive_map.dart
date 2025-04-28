@@ -9,6 +9,8 @@ import '../models/game_types.dart';
 import 'package:xml/xml.dart';
 import 'package:path_drawing/path_drawing.dart';
 import 'province_details_popup.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:ui' as ui;
 
 
 class InteractiveMap extends StatefulWidget {
@@ -33,6 +35,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   late Animation<double> _fadeAnimation;
   final Map<String, Path> _cachedPaths = {};
   final Map<String, Color> _cachedColors = {};
+  Map<String, ui.Image> flagImages = {};
+  TransformationController transformationController = TransformationController();
 
   // Helper method to convert hex color string to Color
   Color _hexToColor(String hexString) {
@@ -115,6 +119,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     
     print('Starting to load regions...');
     loadRegions();
+    _loadFlagImages();
   }
 
   @override
@@ -158,6 +163,26 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       print('State updated with ${regions.length} regions');
     });
     _fadeController.forward();
+  }
+
+  Future<void> _loadFlagImages() async {
+    for (final nation in widget.game.nations) {
+      try {
+        final data = await rootBundle.load('assets/flags/${nation.nationTag.toLowerCase()}.png');
+        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+        final frame = await codec.getNextFrame();
+        flagImages[nation.nationTag.toLowerCase()] = frame.image;
+      } catch (e) {
+        print('Error loading flag for ${nation.nationTag}: $e');
+      }
+    }
+    setState(() {}); // Trigger rebuild once flags are loaded
+  }
+
+  double get currentScale {
+    final matrix = transformationController.value;
+    // Scale is the first element in the matrix
+    return matrix.getMaxScaleOnAxis();
   }
 
   void _handleRecruitArmy(String provinceId, int armyChange, int industryChange) {
@@ -224,10 +249,15 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         children: [
           Center(
             child: InteractiveViewer(
+              transformationController: transformationController,
               boundaryMargin: const EdgeInsets.all(8.0),
               minScale: 0.1,
               maxScale: 20.0,
               constrained: false,
+              onInteractionUpdate: (details) {
+                // Trigger rebuild when scale changes
+                setState(() {});
+              },
               child: RepaintBoundary(
                 child: CustomPaint(
                   size: const Size(1200, 480),
@@ -238,10 +268,14 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     selectedRegionId: selectedRegion?.id,
                     onRegionSelected: (regionId) {
                       setState(() {
-                        selectedRegion = regionId != null ? Region(id: regionId, path: '') : null;
+                        selectedRegion = regionId != null 
+                            ? Region(id: regionId, path: '') 
+                            : null;
                       });
                     },
                     game: widget.game,
+                    scale: currentScale,
+                    flagImages: flagImages,
                   ),
                 ),
               ),
@@ -255,7 +289,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               child: ProvinceDetailsPopup(
                 province: selectedProvince,
                 ownerNation: selectedNation,
-                onRecruitArmy: selectedProvince.industry >= 10 
+                onRecruitArmy: selectedProvince.army >= 10 
                   ? (armyChange, industryChange) => _handleRecruitArmy(
                       selectedProvince.id,
                       armyChange,
@@ -277,11 +311,14 @@ class MapPainter extends CustomPainter {
   final String? selectedRegionId;
   final Function(String?) onRegionSelected;
   final Game game;
+  final double scale;
+  final Map<String, ui.Image> flagImages;
 
-  // Store text rendering information
   final List<({
     TextPainter painter,
     Offset offset,
+    Rect bgRect,
+    String nationTag,
   })> deferredText = [];
 
   MapPainter({
@@ -291,10 +328,15 @@ class MapPainter extends CustomPainter {
     required this.selectedRegionId,
     required this.onRegionSelected,
     required this.game,
+    required this.scale,
+    required this.flagImages,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Skip text rendering if zoom is too low
+    final shouldRenderText = scale >= 4.0;
+
     final borderPaint = Paint()
       ..color = Colors.black
       ..strokeWidth = 0.05
@@ -305,7 +347,6 @@ class MapPainter extends CustomPainter {
       textAlign: TextAlign.center,
     );
 
-    // Clear any previous deferred text
     deferredText.clear();
 
     // First pass: Draw all provinces
@@ -313,102 +354,136 @@ class MapPainter extends CustomPainter {
       final path = cachedPaths[region.id]!;
       final color = cachedColors[region.id]!;
       
-      // Draw fill
-      final fillPaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.fill;
-      
-      canvas.drawPath(path, fillPaint);
-      
-      // Draw border
+      canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
       canvas.drawPath(path, borderPaint);
 
-      // Prepare text for deferred rendering
-      final province = game.provinces.firstWhere(
-        (p) => p.id == region.id,
-        orElse: () => Province(
-          id: '',
-          name: '',
-          path: '',
-          population: 0,
-          goldIncome: 0,
-          industry: 0,
-          buildings: [],
-          resourceType: ResourceType.none,
-          army: 0,
-          owner: '',
-        ),
-      );
+      if (shouldRenderText) {
+        final province = game.provinces.firstWhere(
+          (p) => p.id == region.id,
+          orElse: () => Province(
+            id: '',
+            name: '',
+            path: '',
+            population: 0,
+            goldIncome: 0,
+            industry: 0,
+            buildings: [],
+            resourceType: ResourceType.none,
+            army: 0,
+            owner: '',
+          ),
+        );
 
-      if (province.industry > 0) {
-        final bounds = path.getBounds();
-        final center = bounds.center;
-        
-        // Format the number more compactly
-        final formattedNumber = _formatNumber(province.industry);
-        
-        // Calculate font size
-        final provinceSize = bounds.width.abs() * bounds.height.abs();
-        final fontSize = (provinceSize * 0.0003).clamp(1.2, 2.2);
-        
-        // Create text span with spaces between digits
-        final textSpan = TextSpan(
-          text: formattedNumber.split('').join(' '),
-          style: TextStyle(
-            color: Colors.white, // White text
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600,
-            letterSpacing: -fontSize * 0.2,
-          ),
-        );
-        
-        // Create and measure text painter
-        final provincePainter = TextPainter(
-          text: textSpan,
-          textDirection: TextDirection.ltr,
-          textAlign: TextAlign.center,
-        );
-        
-        // Measure text
-        provincePainter.layout(maxWidth: double.infinity);
-        final requiredWidth = provincePainter.width;
-        
-        // Final layout
-        provincePainter.layout(
-          minWidth: requiredWidth,
-          maxWidth: requiredWidth,
-        );
-        
-        // Store for deferred rendering
-        deferredText.add((
-          painter: provincePainter,
-          offset: Offset(
-            center.dx - provincePainter.width / 2,
-            center.dy - provincePainter.height / 2,
-          ),
-        ));
+        if (province.army > 0) {
+          final bounds = path.getBounds();
+          final center = bounds.center;
+          
+          // Format army number divided by 1000
+          final armyInK = province.army / 1000.0;
+          String formattedNumber;
+          bool isDecimal = false;
+          
+          if (armyInK < 1) {
+              formattedNumber = armyInK.toStringAsFixed(1);
+              isDecimal = true;
+          } else {
+              formattedNumber = armyInK.floor().toString();
+          }
+          
+          final provinceSize = bounds.width.abs() * bounds.height.abs();
+          final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
+          
+          final textSpan = TextSpan(
+            text: formattedNumber,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -fontSize * 0.05, // Wider spacing for decimals
+            ),
+          );
+          
+          final provincePainter = TextPainter(
+            text: textSpan,
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.left,
+
+          );
+          
+          provincePainter.layout(maxWidth: double.infinity);
+          final requiredWidth = provincePainter.width;
+          
+          // Calculate rectangle dimensions with smaller proportions
+          final padding = fontSize * 0.25;
+          final flagWidth = fontSize * 1.0;
+          final totalWidth = requiredWidth + padding * 3 + flagWidth;
+          final height = fontSize * 1.2;
+
+          final bgRect = Rect.fromCenter(
+            center: center,
+            width: totalWidth,
+            height: height,
+          );
+          
+          deferredText.add((
+            painter: provincePainter,
+            offset: Offset(
+              bgRect.left + flagWidth + padding * 2,
+              bgRect.top + (bgRect.height - provincePainter.height) / 2 - (fontSize * 0.3),
+            ),
+            bgRect: bgRect,
+            nationTag: province.owner.toLowerCase(),
+          ));
+        }
       }
     }
 
-    // Second pass: Draw all text
-    for (final textItem in deferredText) {
-      textItem.painter.paint(canvas, textItem.offset);
-    }
-  }
+    // Second pass: Draw all text boxes and text
+    if (shouldRenderText) {
+      for (final textItem in deferredText) {
+        // Draw background rectangle with smaller radius
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            textItem.bgRect,
+            Radius.circular(textItem.bgRect.height * 0.15), // Smaller corner radius
+          ),
+          Paint()..color = Colors.black.withOpacity(0.6),
+        );
 
-  String _formatNumber(int number) {
-    if (number >= 1000000) {
-      return '${(number / 1000000).toStringAsFixed(1)}m';
-    } else if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}k';
+        // Draw flag on the left side with adjusted proportions
+        final flagRect = Rect.fromLTWH(
+          textItem.bgRect.left + textItem.bgRect.height * 0.08, // Slightly less padding
+          textItem.bgRect.top + textItem.bgRect.height * 0.15,
+          textItem.bgRect.height * 0.7, // Slightly smaller flag
+          textItem.bgRect.height * 0.7,
+        );
+
+        // Draw flag image
+        try {
+          final flagImage = flagImages[textItem.nationTag];
+          if (flagImage != null) {
+            canvas.drawImageRect(
+              flagImage,
+              Rect.fromLTWH(0, 0, flagImage.width.toDouble(), flagImage.height.toDouble()),
+              flagRect,
+              Paint(),
+            );
+          }
+        } catch (e) {
+          print('Error drawing flag: $e');
+        }
+
+        // Draw text
+        textItem.painter.paint(canvas, textItem.offset);
+      }
     }
-    return number.toString();
   }
 
   @override
   bool shouldRepaint(MapPainter oldDelegate) {
     return oldDelegate.selectedRegionId != selectedRegionId ||
-           oldDelegate.game != game;
+           oldDelegate.game != game ||
+           oldDelegate.scale != scale;
   }
 
   @override
