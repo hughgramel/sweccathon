@@ -238,7 +238,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     selectedRegionId: selectedRegion?.id,
                     onRegionSelected: (regionId) {
                       setState(() {
-                        selectedRegion = Region(id: regionId, path: '');
+                        selectedRegion = regionId != null ? Region(id: regionId, path: '') : null;
                       });
                     },
                   ),
@@ -274,7 +274,7 @@ class MapPainter extends CustomPainter {
   final Map<String, Path> cachedPaths;
   final Map<String, Color> cachedColors;
   final String? selectedRegionId;
-  final Function(String) onRegionSelected;
+  final Function(String?) onRegionSelected;
 
   MapPainter({
     required this.regions,
@@ -314,14 +314,21 @@ class MapPainter extends CustomPainter {
 
   @override
   bool hitTest(Offset position) {
+    bool hitRegion = false;
     for (final region in regions) {
       final path = cachedPaths[region.id]!;
       if (path.contains(position)) {
         onRegionSelected(region.id);
-        return true;
+        hitRegion = true;
+        break;
       }
     }
-    return false;
+    
+    // If we didn't hit any region, clear the selection
+    if (!hitRegion) {
+      onRegionSelected(null);
+    }
+    return true; // Always return true to ensure we handle all clicks
   }
 }
 
@@ -370,6 +377,4 @@ class RegionBorderPainter extends CustomPainter {
   bool shouldRepaint(RegionBorderPainter oldDelegate) {
     return oldDelegate.path != path;
   }
-  
-  
 }
