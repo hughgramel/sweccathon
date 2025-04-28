@@ -63,9 +63,9 @@ class ProvinceDetailsPopup extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           // Province info section
           Padding(
             padding: const EdgeInsets.all(16),
@@ -80,23 +80,23 @@ class ProvinceDetailsPopup extends StatelessWidget {
                   ),
                 ),
                 if (ownerNation != null) Row(
-                  children: [
-                    Image.asset(
-                      'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
+                    children: [
+                      Image.asset(
+                        'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
                       width: 32,
                       height: 24,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      ownerNation!.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
+                        fit: BoxFit.contain,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 8),
+                      Text(
+                        ownerNation!.name,
+                        style: const TextStyle(
+                        fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -149,7 +149,7 @@ class ProvinceDetailsPopup extends StatelessWidget {
                           color: Color(0xFF4792BA), // Darker blue from reference
                           offset: Offset(0, 4),
                           blurRadius: 0,
-                        ),
+                ),
                       ],
                     ),
                     child: Material(
@@ -234,13 +234,13 @@ class ProvinceDetailsPopup extends StatelessWidget {
                           ),
                         ),
                       ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
-          ),
-        ],
+            ),
+          ],
       ),
     );
   }

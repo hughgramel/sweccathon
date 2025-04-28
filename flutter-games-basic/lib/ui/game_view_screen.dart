@@ -7,6 +7,7 @@ import '../data/world_1836.dart';
 import '../widgets/resource_bar.dart';
 import '../services/game_persistence_service.dart';
 import '../widgets/popup.dart';
+import 'dart:async';
 
 class GameViewScreen extends StatefulWidget {
   final Game game;
@@ -32,6 +33,9 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   Province? selectedProvince;
+  Timer? _tickTimer;
+  bool _isPaused = true;
+  int _currentSpeed = 1;  // Track current speed
 
   String _formatNumber(num number) {
     if (number == 0) return "0";
@@ -98,6 +102,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
 
   @override
   void dispose() {
+    _tickTimer?.cancel();
     _fadeController.dispose();
     super.dispose();
   }
@@ -267,6 +272,38 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
     );
   }
 
+  void _setGameSpeed(int speed) {
+    _tickTimer?.cancel();
+    setState(() {
+      _currentSpeed = speed;
+    });
+    if (_isPaused) return;
+
+    final intervals = {
+      1: const Duration(seconds: 1),
+      2: const Duration(milliseconds: 500),
+      3: const Duration(milliseconds: 250),
+      4: const Duration(milliseconds: 100),  // 10 ticks per second
+    };
+
+    _tickTimer = Timer.periodic(intervals[speed]!, (_) {
+      setState(() {
+        currentGame = currentGame.incrementDate();
+      });
+    });
+  }
+
+  void _togglePause() {
+    setState(() {
+      _isPaused = !_isPaused;
+      if (_isPaused) {
+        _tickTimer?.cancel();
+      } else {
+        _setGameSpeed(_currentSpeed); // Resume at current speed
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     print('GameViewScreen build');
@@ -400,42 +437,88 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                   ),
                                 ],
                               ),
-                              Container(
-                                transform: Matrix4.translationValues(0, -2, 0),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF67B9E7),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0xFF4792BA),
-                                      offset: Offset(0, 4),
-                                      blurRadius: 0,
-                                    ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
+                              Row(
+                                children: [
+                                  _SpeedButton(
+                                    label: '1',
+                                    isActive: !_isPaused && _currentSpeed == 1,
+                                    isSelected: _currentSpeed == 1,
+                                    onPressed: () {
                                       setState(() {
-                                        currentGame = currentGame.incrementDate();
+                                        _isPaused = false;
+                                        _setGameSpeed(1);
                                       });
                                     },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      child: Text(
-                                        'Tick',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _SpeedButton(
+                                    label: '2',
+                                    isActive: !_isPaused && _currentSpeed == 2,
+                                    isSelected: _currentSpeed == 2,
+                                    onPressed: () {
+                                      setState(() {
+                                        _isPaused = false;
+                                        _setGameSpeed(2);
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _SpeedButton(
+                                    label: '3',
+                                    isActive: !_isPaused && _currentSpeed == 3,
+                                    isSelected: _currentSpeed == 3,
+                                    onPressed: () {
+                                      setState(() {
+                                        _isPaused = false;
+                                        _setGameSpeed(3);
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  _SpeedButton(
+                                    label: '4',
+                                    isActive: !_isPaused && _currentSpeed == 4,
+                                    isSelected: _currentSpeed == 4,
+                                    onPressed: () {
+                                      setState(() {
+                                        _isPaused = false;
+                                        _setGameSpeed(4);
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    transform: Matrix4.translationValues(0, -2, 0),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF67B9E7),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0xFF4792BA),
+                                          offset: Offset(0, 4),
+                                          blurRadius: 0,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: _togglePause,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                          child: Text(
+                                            _isPaused ? '▶' : '⏸',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -606,6 +689,61 @@ class _ActionButton extends StatelessWidget {
               icon,
               color: Colors.white,
               size: 24,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SpeedButton extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final bool isSelected;
+  final VoidCallback onPressed;
+
+  const _SpeedButton({
+    required this.label,
+    required this.isActive,
+    required this.isSelected,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      transform: Matrix4.translationValues(0, -2, 0),
+      decoration: BoxDecoration(
+        color: isSelected 
+          ? const Color(0xFF67B9E7)  // Selected color
+          : const Color(0xFF9DCFEF),  // Unselected color
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isSelected
+              ? const Color(0xFF4792BA)  // Selected shadow
+              : const Color(0xFF7BAAC7),  // Unselected shadow
+            offset: const Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              ),
             ),
           ),
         ),

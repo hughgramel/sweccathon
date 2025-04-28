@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
 import '../services/game_persistence_service.dart';
-import '../data/world_1836.dart';
 
 class SaveGameScreen extends StatefulWidget {
   final Game? newGame;

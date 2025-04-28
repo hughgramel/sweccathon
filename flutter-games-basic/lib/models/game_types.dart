@@ -45,7 +45,8 @@ class Province {
   final int industry;
   final List<Building> buildings;
   final ResourceType resourceType;
-  final int army;
+  final int army;  // Local garrison/recruitable troops
+  final int armyInProvince;  // Armies currently stationed/passing through
   final String owner;  // Nation tag of the owner
 
   Province({
@@ -58,6 +59,7 @@ class Province {
     required this.buildings,
     required this.resourceType,
     required this.army,
+    this.armyInProvince = 0,  // Default to 0 if not specified
     required this.owner,
   });
 }

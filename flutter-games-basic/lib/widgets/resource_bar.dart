@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import '../models/game_types.dart';
-import 'dart:math';
 
 class ResourceBar extends StatelessWidget {
   final Nation nation;

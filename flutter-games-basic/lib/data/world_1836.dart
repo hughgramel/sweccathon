@@ -104,6 +104,7 @@ final world1836 = Game(
       resourceType: ResourceType.food,
       army: 5000,
       owner: 'FRA',
+      armyInProvince: 15000,
     ),
     Province(
       id: 'Picardie',
@@ -116,6 +117,7 @@ final world1836 = Game(
       resourceType: ResourceType.food,
       army: 6000,
       owner: 'FRA',
+      armyInProvince: 12000,
     ),
     Province(
       id: 'Cambray',
@@ -188,6 +190,7 @@ final world1836 = Game(
       resourceType: ResourceType.gold,
       army: 10000,
       owner: 'FRA',
+      armyInProvince: 25000,
     ),
     Province(
       id: 'Chartres',

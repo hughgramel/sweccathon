@@ -241,6 +241,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                         selectedRegion = regionId != null ? Region(id: regionId, path: '') : null;
                       });
                     },
+                    game: widget.game,
                   ),
                 ),
               ),
@@ -275,6 +276,7 @@ class MapPainter extends CustomPainter {
   final Map<String, Color> cachedColors;
   final String? selectedRegionId;
   final Function(String?) onRegionSelected;
+  final Game game;
 
   MapPainter({
     required this.regions,
@@ -282,6 +284,7 @@ class MapPainter extends CustomPainter {
     required this.cachedColors,
     required this.selectedRegionId,
     required this.onRegionSelected,
+    required this.game,
   });
 
   @override
@@ -290,6 +293,11 @@ class MapPainter extends CustomPainter {
       ..color = Colors.black
       ..strokeWidth = 0.05
       ..style = PaintingStyle.stroke;
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
 
     for (final region in regions) {
       final path = cachedPaths[region.id]!;
@@ -304,12 +312,95 @@ class MapPainter extends CustomPainter {
       
       // Draw border
       canvas.drawPath(path, borderPaint);
+
+      // Draw army numbers
+      final province = game.provinces.firstWhere(
+        (p) => p.id == region.id,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+        ),
+      );
+
+      if (province.army > 0) {
+        final bounds = path.getBounds();
+        final center = bounds.center;
+        
+        // Format the number (e.g., 15000 -> "15k")
+        final formattedNumber = _formatNumber(province.army);
+        
+        // Calculate a size based on the province bounds
+        final provinceSize = bounds.width.abs() * bounds.height.abs();
+        final fontSize = (provinceSize * 0.002).clamp(4.0, 10.0);
+        
+        textPainter.text = TextSpan(
+          text: formattedNumber,
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            backgroundColor: Colors.white.withOpacity(0.7),
+          ),
+        );
+        
+        textPainter.layout();
+        
+        // Ensure text fits within province bounds
+        final textBounds = Rect.fromCenter(
+          center: center,
+          width: textPainter.width,
+          height: textPainter.height,
+        );
+        
+        if (path.contains(textBounds.topLeft) && 
+            path.contains(textBounds.topRight) &&
+            path.contains(textBounds.bottomLeft) &&
+            path.contains(textBounds.bottomRight)) {
+          
+          // Draw white background for better visibility
+          final bgRect = Rect.fromCenter(
+            center: center,
+            width: textPainter.width + 4,
+            height: textPainter.height,
+          );
+          canvas.drawRect(
+            bgRect,
+            Paint()..color = Colors.white.withOpacity(0.7),
+          );
+          
+          textPainter.paint(
+            canvas,
+            Offset(
+              center.dx - textPainter.width / 2,
+              center.dy - textPainter.height / 2,
+            ),
+          );
+        }
+      }
     }
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000000) {
+      return '${(number / 1000000).toStringAsFixed(1)}m';
+    } else if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}k';
+    }
+    return number.toString();
   }
 
   @override
   bool shouldRepaint(MapPainter oldDelegate) {
-    return oldDelegate.selectedRegionId != selectedRegionId;
+    return oldDelegate.selectedRegionId != selectedRegionId ||
+           oldDelegate.game != game;
   }
 
   @override

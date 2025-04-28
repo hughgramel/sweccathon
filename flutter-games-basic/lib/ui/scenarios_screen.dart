@@ -71,7 +71,7 @@ class ScenariosScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [
+                        colors: const [
                         ],
                       ),
                     ),
@@ -82,13 +82,13 @@ class ScenariosScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                      children: const [
                         // Text row at the top
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // Year
-                            const Text(
+                            Text(
                               '1836',
                               style: TextStyle(
                                 fontSize: 32,
@@ -106,7 +106,7 @@ class ScenariosScreen extends StatelessWidget {
                             ),
                             
                             // Era
-                            const Text(
+                            Text(
                               'Age of Industrialization',
                               style: TextStyle(
                                 fontSize: 20,
