@@ -45,9 +45,8 @@ class Province {
   final int industry;
   final List<Building> buildings;
   final ResourceType resourceType;
-  final int army;  // Local garrison/recruitable troops
-  final int armyInProvince;  // Armies currently stationed/passing through
-  final String owner;  // Nation tag of the owner
+  final int army;  // Standing army in this province
+  final String owner;  // Nation tag that owns this province
 
   Province({
     required this.id,
@@ -59,7 +58,6 @@ class Province {
     required this.buildings,
     required this.resourceType,
     required this.army,
-    this.armyInProvince = 0,  // Default to 0 if not specified
     required this.owner,
   });
 }
@@ -69,11 +67,13 @@ class Nation {
   final String name;
   final String color;
   final String hexColor;
-  final List<String> nationProvinces;  // List of province IDs owned by this nation
-  final int gold;
-  final int researchPoints;
+  final List<String> nationProvinces;
+  final List<String> allies;
+  final List<String> borderProvinces;
+  final double gold;
+  final double researchPoints;
   final String? currentResearchId;
-  final int currentResearchProgress;
+  final double currentResearchProgress;
   final List<QueuedBuild>? buildQueue;
   final bool isAI;
 
@@ -83,6 +83,8 @@ class Nation {
     required this.color,
     required this.hexColor,
     required this.nationProvinces,
+    this.allies = const [],
+    this.borderProvinces = const [],
     required this.gold,
     required this.researchPoints,
     this.currentResearchId,
@@ -90,6 +92,38 @@ class Nation {
     this.buildQueue,
     required this.isAI,
   });
+
+  Nation copyWith({
+    String? nationTag,
+    String? name,
+    String? color,
+    String? hexColor,
+    List<String>? nationProvinces,
+    List<String>? allies,
+    List<String>? borderProvinces,
+    double? gold,
+    double? researchPoints,
+    String? currentResearchId,
+    double? currentResearchProgress,
+    List<QueuedBuild>? buildQueue,
+    bool? isAI,
+  }) {
+    return Nation(
+      nationTag: nationTag ?? this.nationTag,
+      name: name ?? this.name,
+      color: color ?? this.color,
+      hexColor: hexColor ?? this.hexColor,
+      nationProvinces: nationProvinces ?? this.nationProvinces,
+      allies: allies ?? this.allies,
+      borderProvinces: borderProvinces ?? this.borderProvinces,
+      gold: gold ?? this.gold,
+      researchPoints: researchPoints ?? this.researchPoints,
+      currentResearchId: currentResearchId ?? this.currentResearchId,
+      currentResearchProgress: currentResearchProgress ?? this.currentResearchProgress,
+      buildQueue: buildQueue ?? this.buildQueue,
+      isAI: isAI ?? this.isAI,
+    );
+  }
 
   // Calculate total resources - now takes provinces as parameter
   int getTotalPopulation(List<Province> allProvinces) => 
@@ -162,6 +196,8 @@ class Game {
             color: nation.color,
             hexColor: nation.hexColor,
             nationProvinces: nation.nationProvinces,
+            allies: nation.allies,
+            borderProvinces: nation.borderProvinces,
             gold: nation.gold + goldChange,
             researchPoints: nation.researchPoints,
             currentResearchId: nation.currentResearchId,

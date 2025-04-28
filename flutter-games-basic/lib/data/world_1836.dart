@@ -52,6 +52,8 @@ final world1836 = Game(
         'Bas-Poitou', 'Anjou', 'Touraine', 'Blois', 'Orleanais', 'Berry', 
         'Nemours', 'Nivernais', 'Auxerrois', 'Charolais', 'Haut-Poitou'
       ],
+      allies: ['GBR'],
+      borderProvinces: ['Bruges', 'Lille'],
       gold: 2000,
       researchPoints: 100,
       currentResearchId: 'steam_power',
@@ -65,6 +67,8 @@ final world1836 = Game(
       color: '#2a4163',
       hexColor: '#2a4163',
       nationProvinces: ['Brandenburg', 'East_Prussia', 'Silesia', 'Rhineland', 'Ruhr'],
+      allies: ['AUS', 'RUS'],
+      borderProvinces: [],
       gold: 3000,
       researchPoints: 120,
       currentResearchId: 'military_science',
@@ -83,6 +87,8 @@ final world1836 = Game(
         'Den_Haag', 'Utrecht', 'Gelre', 'Zeeland', 'Amsterdam', 'Friesland', 
         'Groningen', 'Oversticht', 'Luxembourg'
       ],
+      allies: ['GBR', 'PRU'],
+      borderProvinces: ['Calais', 'Artois'],
       gold: 1500,
       researchPoints: 80,
       currentResearchId: 'naval_technology',
@@ -104,7 +110,6 @@ final world1836 = Game(
       resourceType: ResourceType.food,
       army: 5000,
       owner: 'FRA',
-      armyInProvince: 15000,
     ),
     Province(
       id: 'Picardie',
@@ -117,7 +122,6 @@ final world1836 = Game(
       resourceType: ResourceType.food,
       army: 6000,
       owner: 'FRA',
-      armyInProvince: 12000,
     ),
     Province(
       id: 'Cambray',
@@ -190,7 +194,6 @@ final world1836 = Game(
       resourceType: ResourceType.gold,
       army: 10000,
       owner: 'FRA',
-      armyInProvince: 25000,
     ),
     Province(
       id: 'Chartres',

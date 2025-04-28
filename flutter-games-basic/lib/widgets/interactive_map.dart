@@ -97,9 +97,13 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         color: '',
         hexColor: '',
         nationProvinces: [],
+        allies: [],
+        borderProvinces: [],
         gold: 0,
         researchPoints: 0,
+        currentResearchId: null,
         currentResearchProgress: 0,
+        buildQueue: null,
         isAI: false,
       ),
     );
@@ -375,65 +379,115 @@ class MapPainter extends CustomPainter {
         );
 
         if (province.army > 0) {
-          final bounds = path.getBounds();
-          final center = bounds.center;
-          
-          // Format army number divided by 1000
-          final armyInK = province.army / 1000.0;
-          String formattedNumber;
-          bool isDecimal = false;
-          
-          if (armyInK < 1) {
-              formattedNumber = armyInK.toStringAsFixed(1);
-              isDecimal = true;
-          } else {
-              formattedNumber = armyInK.floor().toString();
+          // Get the owning nation of this province
+          final ownerNation = game.nations.firstWhere(
+            (n) => n.nationTag == province.owner,
+            orElse: () => Nation(
+              nationTag: '',
+              name: '',
+              color: '',
+              hexColor: '',
+              nationProvinces: [],
+              allies: [],
+              borderProvinces: [],
+              gold: 0,
+              researchPoints: 0,
+              currentResearchId: null,
+              currentResearchProgress: 0,
+              buildQueue: null,
+              isAI: false,
+            ),
+          );
+
+          // Get the player's nation
+          final playerNation = game.nations.firstWhere(
+            (n) => n.nationTag == game.playerNationTag,
+            orElse: () => Nation(
+              nationTag: '',
+              name: '',
+              color: '',
+              hexColor: '',
+              nationProvinces: [],
+              allies: [],
+              borderProvinces: [],
+              gold: 0,
+              researchPoints: 0,
+              currentResearchId: null,
+              currentResearchProgress: 0,
+              buildQueue: null,
+              isAI: false,
+            ),
+          );
+          print('playerNation: ${playerNation.name}');
+          print('ownerNation: ${ownerNation.name}');
+
+          // Only show armies if:
+          // 1. Province is owned by an ally (including player's own nation)
+          // 2. OR Province is in player's border provinces
+          final isAllied = ownerNation.nationTag == playerNation.nationTag || 
+                         playerNation.allies.contains(ownerNation.nationTag);
+          final isBorderProvince = playerNation.borderProvinces.contains(province.id) || ownerNation.borderProvinces.contains(province.id);
+          print('playerNation.borderProvinces: ${playerNation.borderProvinces}');
+          print('ownerNation.borderProvinces: ${ownerNation.borderProvinces}');
+          if (isAllied || isBorderProvince) {
+            final bounds = path.getBounds();
+            final center = bounds.center;
+            
+            // Format army number divided by 1000
+            final armyInK = province.army / 1000.0;
+            String formattedNumber;
+            
+            if (armyInK < 1) {
+                formattedNumber = armyInK.toStringAsFixed(1);
+            } else {
+                formattedNumber = armyInK.floor().toString();
+            }
+            
+            final provinceSize = bounds.width.abs() * bounds.height.abs();
+            final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
+            
+            final textSpan = TextSpan(
+              text: formattedNumber,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -fontSize * 0.05,
+              ),
+            );
+            
+            final provincePainter = TextPainter(
+              text: textSpan,
+              textDirection: TextDirection.ltr,
+              textAlign: TextAlign.left,
+
+            );
+            
+            provincePainter.layout(maxWidth: double.infinity);
+            final requiredWidth = provincePainter.width;
+            
+            // Calculate rectangle dimensions with smaller proportions
+            final padding = fontSize * 0.25;
+            final flagWidth = fontSize * 1.0;
+            final totalWidth = requiredWidth + padding * 3 + flagWidth;
+            final height = fontSize * 1.2;
+
+            final bgRect = Rect.fromCenter(
+              center: center,
+              width: totalWidth,
+              height: height,
+            );
+            
+            deferredText.add((
+              painter: provincePainter,
+              offset: Offset(
+                bgRect.left + flagWidth + padding * 2,
+                bgRect.top + (bgRect.height - provincePainter.height) / 2 - (fontSize * 0.3),
+              ),
+              bgRect: bgRect,
+              nationTag: province.owner.toLowerCase(),
+            ));
           }
-          
-          final provinceSize = bounds.width.abs() * bounds.height.abs();
-          final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
-          
-          final textSpan = TextSpan(
-            text: formattedNumber,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -fontSize * 0.05, // Wider spacing for decimals
-            ),
-          );
-          
-          final provincePainter = TextPainter(
-            text: textSpan,
-            textDirection: TextDirection.ltr,
-            textAlign: TextAlign.left,
-
-          );
-          
-          provincePainter.layout(maxWidth: double.infinity);
-          final requiredWidth = provincePainter.width;
-          
-          // Calculate rectangle dimensions with smaller proportions
-          final padding = fontSize * 0.25;
-          final flagWidth = fontSize * 1.0;
-          final totalWidth = requiredWidth + padding * 3 + flagWidth;
-          final height = fontSize * 1.2;
-
-          final bgRect = Rect.fromCenter(
-            center: center,
-            width: totalWidth,
-            height: height,
-          );
-          
-          deferredText.add((
-            painter: provincePainter,
-            offset: Offset(
-              bgRect.left + flagWidth + padding * 2,
-              bgRect.top + (bgRect.height - provincePainter.height) / 2 - (fontSize * 0.3),
-            ),
-            bgRect: bgRect,
-            nationTag: province.owner.toLowerCase(),
-          ));
         }
       }
     }
