@@ -511,56 +511,6 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 ),
               ],
             ),
-            
-            // Left side action buttons
-            if (selectedProvince == null) 
-              Positioned(
-                left: 16,
-                top: MediaQuery.of(context).padding.top + 105, // Below top bar
-                child: Column(
-                  children: [
-                    _ActionButton(
-                      label: '',
-                      icon: Icons.build,
-                      color: const Color(0xFF6EC53E),
-                      shadowColor: const Color(0xFF4A9E1C),
-                      onPressed: () => _showActionPopup(context, 'Build'),
-                    ),
-                    const SizedBox(height: 8),
-                    _ActionButton(
-                      label: '',
-                      icon: Icons.science,
-                      color: const Color(0xFF67B9E7),
-                      shadowColor: const Color(0xFF4792BA),
-                      onPressed: () => _showActionPopup(context, 'Research'),
-                    ),
-                    const SizedBox(height: 8),
-                    _ActionButton(
-                      label: '',
-                      icon: Icons.security,
-                      color: const Color(0xFFE76767),
-                      shadowColor: const Color(0xFFBA4747),
-                      onPressed: () => _showActionPopup(context, 'Army'),
-                    ),
-                    const SizedBox(height: 8),
-                    _ActionButton(
-                      label: '',
-                      icon: Icons.track_changes,
-                      color: const Color(0xFF3E8C5E),
-                      shadowColor: const Color(0xFF2A6B42),
-                      onPressed: () => _showActionPopup(context, 'Focus'),
-                    ),
-                    const SizedBox(height: 8),
-                    _ActionButton(
-                      label: '',
-                      icon: Icons.menu_book,
-                      color: const Color(0xFF677CE7),
-                      shadowColor: const Color(0xFF4759BA),
-                      onPressed: () => _showActionPopup(context, 'Diplomacy'),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -637,57 +587,6 @@ class _ResourceItem extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final Color shadowColor;
-  final VoidCallback onPressed;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.shadowColor,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      transform: Matrix4.translationValues(0, -2, 0),
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            offset: const Offset(0, 4),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onPressed,
-          child: Center(
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../models/game_types.dart';
 class NationDetailsPopup extends StatelessWidget {
   final Nation nation;
   final Nation playerNation;
+  final Game game;
   final VoidCallback onClose;
   final VoidCallback onDeclareWar;
   final VoidCallback onMakePeace;
@@ -14,6 +15,7 @@ class NationDetailsPopup extends StatelessWidget {
     super.key,
     required this.nation,
     required this.playerNation,
+    required this.game,
     required this.onClose,
     required this.onDeclareWar,
     required this.onMakePeace,
@@ -60,6 +62,12 @@ class NationDetailsPopup extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAtWar = playerNation.atWarWith.contains(nation.nationTag);
     final isAllied = playerNation.allies.contains(nation.nationTag);
+
+    // Calculate total values from provinces
+    final totalPopulation = nation.getTotalPopulation(game.provinces);
+    final totalGold = nation.gold;  // Current gold is stored in nation
+    final totalArmy = nation.getTotalArmy(game.provinces);
+    final totalIndustry = nation.getTotalIndustry(game.provinces);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -149,22 +157,22 @@ class NationDetailsPopup extends StatelessWidget {
                     _StatItem(
                       emoji: '👥',
                       label: 'Population',
-                      value: _formatNumber(nation.gold), // Using gold as a placeholder
+                      value: _formatNumber(totalPopulation),
                     ),
                     _StatItem(
                       emoji: '💰',
                       label: 'Gold',
-                      value: _formatNumber(nation.gold),
+                      value: _formatNumber(totalGold),
                     ),
                     _StatItem(
                       emoji: '⚔️',
                       label: 'Army',
-                      value: _formatNumber(nation.gold), // Using gold as a placeholder
+                      value: _formatNumber(totalArmy),
                     ),
                     _StatItem(
                       emoji: '🏭',
                       label: 'Industry',
-                      value: _formatNumber(nation.gold), // Using gold as a placeholder
+                      value: _formatNumber(totalIndustry),
                     ),
                   ],
                 ),

@@ -143,6 +143,7 @@ class GamePersistenceService {
       'resourceType': province.resourceType.index,
       'army': province.army,
       'owner': province.owner,
+      'borderingProvinces': province.borderingProvinces,
     };
   }
 
@@ -237,6 +238,7 @@ class GamePersistenceService {
       resourceType: ResourceType.values[json['resourceType'] as int],
       army: (json['army'] as num).toInt(),
       owner: json['owner'] as String,
+      borderingProvinces: List<String>.from(json['borderingProvinces'] as List? ?? []),
     );
   }
 

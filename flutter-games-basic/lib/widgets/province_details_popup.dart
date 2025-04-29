@@ -4,15 +4,15 @@ import '../models/game_types.dart';
 class ProvinceDetailsPopup extends StatelessWidget {
   final Province province;
   final Nation? ownerNation;
-  final VoidCallback? onRecruitArmy;
-  final VoidCallback? onClose;
+  final Game game;
+  final VoidCallback onClose;
 
   const ProvinceDetailsPopup({
     super.key,
     required this.province,
     required this.ownerNation,
-    this.onRecruitArmy,
-    this.onClose,
+    required this.game,
+    required this.onClose,
   });
 
   String _formatNumber(num number) {
@@ -52,12 +52,31 @@ class ProvinceDetailsPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Only enable recruit button if owner has enough reserves
-    final bool canRecruit = ownerNation != null && ownerNation!.armyReserve >= 30000;
+    final canSeeArmy = province.owner == game.playerNationTag || 
+      game.playerNation.nationProvinces.any((playerProvinceId) {
+        final playerProvince = game.provinces.firstWhere(
+          (p) => p.id == playerProvinceId,
+          orElse: () => Province(
+            id: '',
+            name: '',
+            path: '',
+            population: 0,
+            goldIncome: 0,
+            industry: 0,
+            buildings: [],
+            resourceType: ResourceType.none,
+            army: 0,
+            owner: '',
+            borderingProvinces: [],
+          ),
+        );
+        return playerProvince.borderingProvinces.contains(province.id);
+      });
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -69,36 +88,9 @@ class ProvinceDetailsPopup extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: onClose,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  child: const Icon(
-                    Icons.close,
-                    size: 20,
-                    color: Colors.black54,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Column(
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Province info section
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       province.name,
@@ -107,168 +99,76 @@ class ProvinceDetailsPopup extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    if (ownerNation != null)
-                      Row(
-                        children: [
-                          Image.asset(
-                            'assets/flags/${ownerNation!.nationTag.toLowerCase()}.png',
-                            width: 32,
-                            height: 24,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 8),
+            const SizedBox(height: 16),
+            if (ownerNation != null) ...[
                           Text(
-                            ownerNation!.name,
+                'Owner: ${ownerNation!.name}',
                             style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                  color: Colors.black87,
                             ),
                           ),
-                        ],
-                      ),
-                  ],
+              const SizedBox(height: 8),
+            ],
+            Text(
+              'Population: ${province.population}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+                                  Text(
+              'Gold Income: ${province.goldIncome}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+                                    ),
+                                  ),
+            const SizedBox(height: 8),
+                                  Text(
+              'Industry: ${province.industry}',
+              style: const TextStyle(
+                                      fontSize: 16,
+                color: Colors.black87,
+                                    ),
+                                  ),
+            const SizedBox(height: 8),
+            if (canSeeArmy) ...[
+              Text(
+                'Army: ${province.army}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
                 ),
               ),
-              // Stats section
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StatItem(
-                      emoji: '👥',
-                      label: 'Population',
-                      value: _formatNumber(province.population),
-                    ),
-                    _StatItem(
-                      emoji: '💰',
-                      label: 'Income',
-                      value: _formatNumber(province.goldIncome),
-                    ),
-                    _StatItem(
-                      emoji: '🏭',
-                      label: 'Industry',
-                      value: _formatNumber(province.industry),
-                    ),
-                    _StatItem(
-                      emoji: '⚔️',
-                      label: 'Army',
-                      value: _formatNumber(province.army),
-                    ),
-                  ],
-                ),
-              ),
-              // Bottom buttons
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        transform: Matrix4.translationValues(0, -2, 0),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF67B9E7), // Light blue from reference
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0xFF4792BA), // Darker blue from reference
-                              offset: Offset(0, 4),
-                              blurRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              // Handle Info tap
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
+              const SizedBox(height: 8),
+            ],
                                   Text(
-                                    'ℹ️',
-                                    style: TextStyle(
-                                      fontSize: 20,
+              'Resource: ${province.resourceType.toString().split('.').last}',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Info',
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onClose,
+                  child: const Text(
+                    'Close',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        transform: Matrix4.translationValues(0, -2, 0),
-                        decoration: BoxDecoration(
-                          color: canRecruit ? const Color(0xFF6EC53E) : Colors.grey, // Light green or grey
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: canRecruit ? const Color(0xFF59A700) : Colors.grey.shade700, // Darker green or grey
-                              offset: const Offset(0, 4),
-                              blurRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: canRecruit ? onRecruitArmy : null,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    '🏛️',
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      color: canRecruit ? Colors.white : Colors.white70,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Recruit',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: canRecruit ? Colors.white : Colors.white70,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                      color: Colors.black54,
                         ),
                       ),
                     ),
                   ],
-                ),
               ),
             ],
           ),
-        ],
       ),
     );
   }

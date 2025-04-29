@@ -92,7 +92,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   }
 
   Province _getProvinceForRegion(String regionId) {
-    print('=== Getting Province for Region ===');
     return widget.game.provinces.firstWhere(
       (p) => p.id == regionId,
       orElse: () => Province(
@@ -305,28 +304,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     return null;
   }
 
-  int _getEffectiveArmySize(String provinceId) {
-    final province = _getProvinceForRegion(provinceId);
-    if (province.id.isEmpty) return 0;
-    
-    // Include armies that are in the process of moving
-    for (final nation in widget.game.nations) {
-      final movement = nation.movements.firstWhere(
-        (m) => m.originProvinceId == provinceId,
-        orElse: () => Movement(
-          originProvinceId: '',
-          destinationProvinceId: '',
-          daysLeft: 0,
-          armySize: 0,
-        ),
-      );
-      if (movement.originProvinceId.isNotEmpty) {
-        return movement.armySize;  // Show the moving army size
-      }
-    }
-    return province.army;  // Return actual army size if no movement
-  }
-
   int _getRemainingDays(String provinceId) {
     for (final nation in widget.game.nations) {
       final movement = nation.movements.firstWhere(
@@ -355,21 +332,93 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     return max(1, (distance * 1).round());
   }
 
+  bool _canSeeArmyInProvince(Province province) {
+    // Can always see armies in your own provinces
+    if (province.owner == widget.game.playerNationTag) {
+      return true;
+    }
+
+    // Get the player's nation
+    final playerNation = widget.game.nations.firstWhere(
+      (n) => n.nationTag == widget.game.playerNationTag,
+    );
+
+    // Check if this province borders any of our provinces
+    for (final playerProvinceId in playerNation.nationProvinces) {
+      final playerProvince = widget.game.provinces.firstWhere(
+        (p) => p.id == playerProvinceId,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+          borderingProvinces: [],
+        ),
+      );
+
+      // Check if this province is in our bordering provinces
+      if (playerProvince.borderingProvinces.contains(province.id)) {
+        return true;
+      }
+
+      // Check if our province is in this province's bordering provinces
+      if (province.borderingProvinces.contains(playerProvince.id)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   bool _canSelectProvince(Province province) {
+    // Can only select and move armies in provinces we own
     return province.owner == widget.game.playerNationTag;
   }
 
   bool _canMoveToProvince(Province targetProvince) {
-    if (targetProvince.owner == widget.game.playerNationTag) {
-      return true;  // Can always move to own provinces
-    }
-    
-    // Check if the owner is an ally
-    final playerNation = widget.game.nations.firstWhere(
-      (n) => n.nationTag == widget.game.playerNationTag,
+    if (selectedRegion == null) return false;
+
+    // Get the origin province
+    final originProvince = widget.game.provinces.firstWhere(
+      (p) => p.id == selectedRegion!.id,
+      orElse: () => Province(
+        id: '',
+        name: '',
+        path: '',
+        population: 0,
+        goldIncome: 0,
+        industry: 0,
+        buildings: [],
+        resourceType: ResourceType.none,
+        army: 0,
+        owner: '',
+        borderingProvinces: [],
+      ),
     );
-    
-    return playerNation.allies.contains(targetProvince.owner);
+
+    // Can only move to provinces that border the origin province
+    if (!originProvince.borderingProvinces.contains(targetProvince.id)) {
+      return false;
+    }
+
+    // Can move to own provinces or allied provinces
+    if (targetProvince.owner == widget.game.playerNationTag || 
+        widget.game.playerNation.allies.contains(targetProvince.owner)) {
+      return true;
+    }
+
+    // Can move to enemy provinces if at war and we border them
+    return widget.game.playerNation.atWarWith.contains(targetProvince.owner);
+  }
+
+  bool _isHostileMovement(Province targetProvince) {
+    return widget.game.playerNation.atWarWith.contains(targetProvince.owner);
   }
 
   bool _hasOutgoingMovement(String provinceId) {
@@ -385,7 +434,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   void _handleRegionTap(String? regionId) {
     print('=== Handling Region Tap ===');
     if (regionId == null) {
-
       print('Clearing selection');
       setState(() {
         selectedRegion = null;
@@ -395,7 +443,22 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       return;
     }
 
-    final targetProvince = _getProvinceForRegion(regionId);
+    final targetProvince = widget.game.provinces.firstWhere(
+      (p) => p.id == regionId,
+      orElse: () => Province(
+        id: '',
+        name: '',
+        path: '',
+        population: 0,
+        goldIncome: 0,
+        industry: 0,
+        buildings: [],
+        resourceType: ResourceType.none,
+        army: 0,
+        owner: '',
+        borderingProvinces: [],
+      ),
+    );
     
     final targetNation = _getNationForProvince(targetProvince);
     
@@ -433,10 +496,25 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       }
 
       if (selectedRegion != null && regionId != selectedRegion!.id) {
-        final originProvince = _getProvinceForRegion(selectedRegion!.id);
+        final originProvince = widget.game.provinces.firstWhere(
+          (p) => p.id == selectedRegion!.id,
+          orElse: () => Province(
+            id: '',
+            name: '',
+            path: '',
+            population: 0,
+            goldIncome: 0,
+            industry: 0,
+            buildings: [],
+            resourceType: ResourceType.none,
+            army: 0,
+            owner: '',
+            borderingProvinces: [],
+          ),
+        );
         print('Checking movement from ${originProvince.id} to ${targetProvince.id}');
         
-        // Silently ignore movement attempts if province has outgoing movement
+        // Only allow movement if we own the origin province
         if (!_hasOutgoingMovement(selectedRegion!.id) && 
             originProvince.army > 0 && 
             _canSelectProvince(originProvince) && 
@@ -469,23 +547,17 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         return;
       }
 
-      // Normal province selection
-      if (_canSelectProvince(targetProvince)) {
-        print('Selecting province ${targetProvince.id}');
+      // Normal province selection - can select any province but can only move armies from owned provinces
         selectedRegion = Region(id: regionId, path: '');
         _showProvinceDetails = false;
         _showNationDetails = false;
         _movementTargetId = null;
-      } else if (targetNation != null && targetNation.nationTag != playerNation.nationTag) {
-        // Show nation details popup for foreign provinces
+
+      // Show nation details for foreign provinces
+      if (targetNation != null && targetNation.nationTag != playerNation.nationTag) {
         print('Showing nation details for ${targetNation.nationTag}');
-        setState(() {
-          selectedRegion = Region(id: regionId, path: '');
-          _showProvinceDetails = false;
-          _movementTargetId = null;
           _showNationDetails = true;
           _selectedNation = targetNation;
-        });
       }
     });
     print('=== Province Selection Complete ===');
@@ -497,35 +569,90 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     final originProvince = _getProvinceForRegion(selectedRegion!.id);
     if (originProvince.army <= 0) return;
 
-    final updatedNations = widget.game.nations.map((nation) {
-      if (nation.nationTag == widget.game.playerNationTag) {
-        return nation.copyWith(
-          movements: [
-            ...nation.movements,
-            Movement(
-              originProvinceId: selectedRegion!.id,
-              destinationProvinceId: destinationId,
-              daysLeft: daysRequired,
-              armySize: originProvince.army,
-            ),
-          ],
-        );
-      }
-      return nation;
-    }).toList();
+    final targetProvince = _getProvinceForRegion(destinationId);
+    final isHostileMove = _isHostileMovement(targetProvince);
 
-    // Don't reduce the army in the origin province anymore
-    final updatedGame = Game(
-      id: widget.game.id,
-      gameName: widget.game.gameName,
-      date: widget.game.date,
-      mapName: widget.game.mapName,
-      playerNationTag: widget.game.playerNationTag,
-      nations: updatedNations,
-      provinces: widget.game.provinces,
-    );
+    if (isHostileMove && targetProvince.army > 0) {
+      // Start movement that will lead to a battle
+      final updatedNations = widget.game.nations.map((nation) {
+        if (nation.nationTag == widget.game.playerNationTag) {
+          return nation.copyWith(
+            movements: [
+              ...nation.movements,
+              Movement(
+                originProvinceId: selectedRegion!.id,
+                destinationProvinceId: destinationId,
+                daysLeft: daysRequired,
+                armySize: originProvince.army,
+                willStartBattle: true,
+              ),
+            ],
+          );
+        }
+        return nation;
+      }).toList();
 
-    widget.onGameUpdate(updatedGame);
+      // Remove army from origin province
+      final updatedProvinces = widget.game.provinces.map((p) {
+        if (p.id == selectedRegion!.id) {
+          return p.copyWith(army: 0);
+        }
+        return p;
+      }).toList();
+
+      final updatedGame = Game(
+        id: widget.game.id,
+        gameName: widget.game.gameName,
+        date: widget.game.date,
+        mapName: widget.game.mapName,
+        playerNationTag: widget.game.playerNationTag,
+        nations: updatedNations,
+        provinces: updatedProvinces,
+        battles: widget.game.battles,
+      );
+
+      widget.onGameUpdate(updatedGame);
+    } else {
+      // Normal movement
+      final updatedNations = widget.game.nations.map((nation) {
+        if (nation.nationTag == widget.game.playerNationTag) {
+          return nation.copyWith(
+            movements: [
+              ...nation.movements,
+              Movement(
+                originProvinceId: selectedRegion!.id,
+                destinationProvinceId: destinationId,
+                daysLeft: daysRequired,
+                armySize: originProvince.army,
+              ),
+            ],
+          );
+        }
+        return nation;
+      }).toList();
+
+      // Remove army from origin province
+      final updatedProvinces = widget.game.provinces.map((p) {
+        if (p.id == selectedRegion!.id) {
+          return p.copyWith(army: 0);
+        }
+        return p;
+      }).toList();
+
+      final updatedGame = Game(
+        id: widget.game.id,
+        gameName: widget.game.gameName,
+        date: widget.game.date,
+        mapName: widget.game.mapName,
+        playerNationTag: widget.game.playerNationTag,
+        nations: updatedNations,
+        provinces: updatedProvinces,
+        battles: widget.game.battles,
+      );
+
+      widget.onGameUpdate(updatedGame);
+    }
+
     setState(() {
       _isMovementMode = false;
       selectedRegion = null;
@@ -735,6 +862,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     flagImages: flagImages,
                     isMovementMode: _isMovementMode,
                     movementOriginId: _movementOriginId,
+                    movementTargetId: _movementTargetId,
                   ),
                   isComplex: true,
                   willChange: _isInteracting,
@@ -905,6 +1033,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     ProvinceDetailsPopup(
                       province: selectedProvince,
                       ownerNation: selectedNation,
+                      game: widget.game,
                       onClose: () {
                         setState(() {
                           _showProvinceDetails = false;
@@ -917,38 +1046,14 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                       playerNation: widget.game.nations.firstWhere(
                         (n) => n.nationTag == widget.game.playerNationTag,
                       ),
+                      game: widget.game,
                       onClose: () {
                         setState(() {
                           _showNationDetails = false;
                           _selectedNation = null;
                         });
                       },
-                      onDeclareWar: () {
-                        showDialog(
-                          context: context,
-                          barrierColor: Colors.black.withOpacity(0.5),
-                          builder: (context) => _ConfirmationDialog(
-                            title: 'Declare War',
-                            message: 'Are you sure you want to declare war on ${_selectedNation!.name}?',
-                            confirmText: 'Declare War',
-                            confirmColor: const Color(0xFFE57373),
-                            confirmShadowColor: const Color(0xFFC62828),
-                            onConfirm: () {
-                              final updatedGame = widget.game.declareWar(
-                                widget.game.playerNationTag,
-                                _selectedNation!.nationTag,
-                              );
-                              widget.onGameUpdate(updatedGame);
-                              Navigator.of(context).pop();
-                              setState(() {
-                                _showNationDetails = false;
-                                _selectedNation = null;
-                              });
-                            },
-                            onCancel: () => Navigator.of(context).pop(),
-                          ),
-                        );
-                      },
+                      onDeclareWar: _handleDeclareWar,
                       onMakePeace: () {
                         showDialog(
                           context: context,
@@ -1072,7 +1177,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                 ),
                 SizedBox(width: 8),
                 Text(
-                  'Cancel Movement',
+                  'Cancel',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1132,6 +1237,49 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       ),
     );
   }
+
+  void _handleGameUpdate(Game updatedGame) {
+    // Check if there are any active battles
+    final hasActiveBattle = updatedGame.battles.any((b) => b.isActive);
+    
+    widget.onGameUpdate(updatedGame);
+    
+    // Trigger repaint if there's an active battle
+    if (hasActiveBattle) {
+      _triggerRepaint();
+    }
+  }
+
+  void _handleDeclareWar() {
+    if (_selectedNation == null) return;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (context) => _ConfirmationDialog(
+        title: 'Declare War',
+        message: 'Are you sure you want to declare war on ${_selectedNation!.name}?',
+        confirmText: 'Declare War',
+        confirmColor: const Color(0xFFE57373),
+        confirmShadowColor: const Color(0xFFC62828),
+        onConfirm: () {
+          final updatedGame = widget.game.declareWar(
+            widget.game.playerNationTag,
+            _selectedNation!.nationTag,
+          );
+          widget.onGameUpdate(updatedGame);
+          Navigator.of(context).pop();
+          setState(() {
+            _showNationDetails = false;
+            _selectedNation = null;
+          });
+          // Trigger repaint to update UI after war declaration
+          _triggerRepaint();
+        },
+        onCancel: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
 }
 
 class MapPainter extends CustomPainter {
@@ -1145,6 +1293,7 @@ class MapPainter extends CustomPainter {
   final Map<String, ui.Image> flagImages;
   final bool isMovementMode;
   final String? movementOriginId;
+  final String? movementTargetId;
   final Map<String, Rect> _cachedBounds = {};
   final Map<String, TextPainter> _cachedTextPainters = {};
   static const double MIN_TEXT_SCALE = 4.0;
@@ -1155,6 +1304,7 @@ class MapPainter extends CustomPainter {
     Rect bgRect,
     String nationTag,
     bool isSelected,
+    Color bgColor,
   })> deferredText = [];
 
   MapPainter({
@@ -1168,6 +1318,7 @@ class MapPainter extends CustomPainter {
     required this.flagImages,
     required this.isMovementMode,
     required this.movementOriginId,
+    required this.movementTargetId,
   }) {
     // Pre-calculate bounds for all paths
     for (final entry in cachedPaths.entries) {
@@ -1177,9 +1328,53 @@ class MapPainter extends CustomPainter {
     }
   }
 
-  Province _getProvinceForRegion(String regionId) {
-    return game.provinces.firstWhere(
-      (p) => p.id == regionId,
+  bool _canSeeArmyInProvince(Province province) {
+    // Can always see armies in your own provinces
+    if (province.owner == game.playerNationTag) {
+      return true;
+    }
+
+    // Get the player's nation
+    final playerNation = game.nations.firstWhere(
+      (n) => n.nationTag == game.playerNationTag,
+    );
+
+    // Check if this province borders any of our provinces
+    for (final playerProvinceId in playerNation.nationProvinces) {
+      final playerProvince = game.provinces.firstWhere(
+        (p) => p.id == playerProvinceId,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+          borderingProvinces: [],
+        ),
+      );
+
+      // Check if this province is in our bordering provinces
+      if (playerProvince.borderingProvinces.contains(province.id)) {
+        return true;
+      }
+
+      // Check if our province is in this province's bordering provinces
+      if (province.borderingProvinces.contains(playerProvince.id)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int _getEffectiveArmySize(String provinceId) {
+    final province = game.provinces.firstWhere(
+      (p) => p.id == provinceId,
       orElse: () => Province(
         id: '',
         name: '',
@@ -1191,12 +1386,9 @@ class MapPainter extends CustomPainter {
         resourceType: ResourceType.none,
         army: 0,
         owner: '',
+        borderingProvinces: [],
       ),
     );
-  }
-
-  int _getEffectiveArmySize(String provinceId) {
-    final province = _getProvinceForRegion(provinceId);
     if (province.id.isEmpty) return 0;
     
     // Include armies that are in the process of moving
@@ -1217,6 +1409,46 @@ class MapPainter extends CustomPainter {
     return province.army;  // Return actual army size if no movement
   }
 
+  bool _canMoveToProvince(Province targetProvince) {
+    if (selectedRegionId == null) return false;
+
+    // Get the origin province
+    final originProvince = game.provinces.firstWhere(
+      (p) => p.id == selectedRegionId,
+      orElse: () => Province(
+        id: '',
+        name: '',
+        path: '',
+        population: 0,
+        goldIncome: 0,
+        industry: 0,
+        buildings: [],
+        resourceType: ResourceType.none,
+        army: 0,
+        owner: '',
+        borderingProvinces: [],
+      ),
+    );
+
+    // Can only move to provinces that border the origin province
+    if (!originProvince.borderingProvinces.contains(targetProvince.id)) {
+      return false;
+    }
+
+    // Can move to own provinces or allied provinces
+    if (targetProvince.owner == game.playerNationTag || 
+        game.playerNation.allies.contains(targetProvince.owner)) {
+      return true;
+    }
+
+    // Can move to enemy provinces if at war and we border them
+    return game.playerNation.atWarWith.contains(targetProvince.owner);
+  }
+
+  bool _isHostileMovement(Province targetProvince) {
+    return game.playerNation.atWarWith.contains(targetProvince.owner);
+  }
+
   void _drawDeferredText(Canvas canvas) {
     for (final textItem in deferredText) {
       if (textItem.bgRect.isEmpty) continue;
@@ -1227,9 +1459,7 @@ class MapPainter extends CustomPainter {
           textItem.bgRect,
           Radius.circular(textItem.bgRect.height * 0.15),
         ),
-        Paint()..color = textItem.isSelected 
-          ? Colors.blue.withOpacity(0.8) 
-          : Colors.black.withOpacity(0.6),
+        Paint()..color = textItem.bgColor,
       );
 
       // Draw flag on the left side with adjusted proportions
@@ -1276,26 +1506,33 @@ class MapPainter extends CustomPainter {
     final arrowSize = 0.8;  // Smaller arrow head
     final lineEndDistance = distance - arrowSize;
     
-    // Draw dotted line
-    final dashLength = 0.2;  // Tiny dashes
-    final gapLength = 0.2;   // Tiny gaps
-    var currentDistance = 0.0;
-    
-    paint.strokeWidth = 0.15;  // Even thinner line
-    
-    while (currentDistance < lineEndDistance) {
-      final startPoint = Offset(
-        start.dx + dirX * currentDistance,
-        start.dy + dirY * currentDistance,
-      );
+    // Draw solid or dotted line based on paint opacity
+    if (paint.color.opacity > 0.5) {
+      // Solid line for confirmed movements
+      canvas.drawLine(start, Offset(
+        start.dx + dirX * lineEndDistance,
+        start.dy + dirY * lineEndDistance,
+      ), paint);
+    } else {
+      // Dotted line for potential movements
+      final dashLength = 0.2;  // Tiny dashes
+      final gapLength = 0.2;   // Tiny gaps
+      var currentDistance = 0.0;
       
-      final endPoint = Offset(
-        start.dx + dirX * min(currentDistance + dashLength, lineEndDistance),
-        start.dy + dirY * min(currentDistance + dashLength, lineEndDistance),
-      );
-      
-      canvas.drawLine(startPoint, endPoint, paint);
-      currentDistance += dashLength + gapLength;
+      while (currentDistance < lineEndDistance) {
+        final startPoint = Offset(
+          start.dx + dirX * currentDistance,
+          start.dy + dirY * currentDistance,
+        );
+        
+        final endPoint = Offset(
+          start.dx + dirX * min(currentDistance + dashLength, lineEndDistance),
+          start.dy + dirY * min(currentDistance + dashLength, lineEndDistance),
+        );
+        
+        canvas.drawLine(startPoint, endPoint, paint);
+        currentDistance += dashLength + gapLength;
+      }
     }
 
     // Draw tiny arrow at the end
@@ -1346,12 +1583,41 @@ class MapPainter extends CustomPainter {
       // Check if the region is visible in the current viewport
       final bounds = _cachedBounds[region.id];
       if (bounds == null || !_isVisible(bounds, size)) continue;
+
+      // Only highlight selected province if we own it
+      final province = game.provinces.firstWhere(
+        (p) => p.id == region.id,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+          borderingProvinces: [],
+        ),
+      );
+
+      final isOwnedSelected = selectedRegionId == region.id && province.owner == game.playerNationTag;
+      
+      if (isOwnedSelected) {
+        // Draw highlight for selected owned province
+        canvas.drawPath(
+          path,
+          Paint()
+            ..color = Colors.blue.withOpacity(0.3)
+            ..style = PaintingStyle.fill,
+        );
+      }
       
       canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
       canvas.drawPath(path, borderPaint);
 
       if (shouldRenderText) {
-        final province = _getProvinceForRegion(region.id);
         if (province.id.isEmpty) continue;
         
         final effectiveArmy = _getEffectiveArmySize(region.id);
@@ -1366,6 +1632,78 @@ class MapPainter extends CustomPainter {
       _drawMovementArrows(canvas);
       _drawDeferredText(canvas);
     }
+
+    // Draw flags for battles
+    for (final textItem in deferredText) {
+      if (textItem.nationTag.contains(',')) {
+        // This is a battle, draw two flags
+        final tags = textItem.nationTag.split(',');
+        if (tags.length == 2) {
+          // Draw attacker flag on the left
+          final leftFlagRect = Rect.fromLTWH(
+            textItem.bgRect.left + textItem.bgRect.height * 0.08,
+            textItem.bgRect.top + textItem.bgRect.height * 0.15,
+            textItem.bgRect.height * 0.7,
+            textItem.bgRect.height * 0.7,
+          );
+
+          // Draw defender flag on the right
+          final rightFlagRect = Rect.fromLTWH(
+            textItem.bgRect.right - textItem.bgRect.height * 0.78,
+            textItem.bgRect.top + textItem.bgRect.height * 0.15,
+            textItem.bgRect.height * 0.7,
+            textItem.bgRect.height * 0.7,
+          );
+
+          try {
+            final attackerFlag = flagImages[tags[0]];
+            final defenderFlag = flagImages[tags[1]];
+            
+            if (attackerFlag != null) {
+              canvas.drawImageRect(
+                attackerFlag,
+                Rect.fromLTWH(0, 0, attackerFlag.width.toDouble(), attackerFlag.height.toDouble()),
+                leftFlagRect,
+                Paint(),
+              );
+            }
+            
+            if (defenderFlag != null) {
+              canvas.drawImageRect(
+                defenderFlag,
+                Rect.fromLTWH(0, 0, defenderFlag.width.toDouble(), defenderFlag.height.toDouble()),
+                rightFlagRect,
+                Paint(),
+              );
+            }
+          } catch (e) {
+            print('Error drawing battle flags: $e');
+          }
+        }
+      } else {
+        // Regular army display, draw single flag
+        try {
+          final flagImage = flagImages[textItem.nationTag];
+          if (flagImage != null) {
+            final flagRect = Rect.fromLTWH(
+              textItem.bgRect.left + textItem.bgRect.height * 0.08,
+              textItem.bgRect.top + textItem.bgRect.height * 0.15,
+              textItem.bgRect.height * 0.7,
+              textItem.bgRect.height * 0.7,
+            );
+            
+            canvas.drawImageRect(
+              flagImage,
+              Rect.fromLTWH(0, 0, flagImage.width.toDouble(), flagImage.height.toDouble()),
+              flagRect,
+              Paint(),
+            );
+          }
+        } catch (e) {
+          print('Error drawing flag: $e');
+        }
+      }
+    }
   }
 
   bool _isVisible(Rect bounds, Size size) {
@@ -1375,6 +1713,9 @@ class MapPainter extends CustomPainter {
 
   void _addDeferredText(String regionId, Province province, Rect bounds, int effectiveArmy) {
     if (province.owner.isEmpty) return;
+    
+    // Only show army count if we can see armies in this province
+    if (!_canSeeArmyInProvince(province)) return;
     
     final ownerNation = game.nations.firstWhere(
       (n) => n.nationTag == province.owner,
@@ -1398,47 +1739,96 @@ class MapPainter extends CustomPainter {
 
     if (ownerNation.nationTag.isEmpty) return;
 
-    final playerNation = game.nations.firstWhere(
-      (n) => n.nationTag == game.playerNationTag,
-      orElse: () => Nation(
-        nationTag: '',
-        name: '',
-        color: '',
-        hexColor: '',
-        nationProvinces: [],
-        allies: [],
-        borderProvinces: [],
-        gold: 0,
-        researchPoints: 0,
-        currentResearchId: null,
-        currentResearchProgress: 0,
-        buildQueue: null,
-        isAI: false,
-        armyReserve: 0,
+    // Check if there's an active battle in this province
+    final activeBattle = game.battles.firstWhere(
+      (b) => b.provinceId == regionId && b.isActive == true,
+      orElse: () => Battle(
+        provinceId: '',
+        attackerTag: '',
+        defenderTag: '',
+        attackerArmy: 0,
+        defenderArmy: 0,
       ),
     );
 
-    if (playerNation.nationTag.isEmpty) return;
+    final isEnemy = game.playerNation.atWarWith.contains(province.owner);
+    final textColor = isEnemy ? Colors.red : Colors.white;
 
-    final isAllied = ownerNation.nationTag == playerNation.nationTag || 
-                     playerNation.allies.contains(ownerNation.nationTag);
-    final isBorderProvince = playerNation.borderProvinces.contains(province.id);
+    final center = bounds.center;
+    double fontSize = (bounds.width.abs() * bounds.height.abs() * 0.0002).clamp(0.8, 1.4);
 
-    if (isAllied || isBorderProvince) {
-      final center = bounds.center;
+    if (activeBattle.provinceId.isNotEmpty) {
+      // Show battle information
+      final attackerNation = game.nations.firstWhere((n) => n.nationTag == activeBattle.attackerTag);
+      final defenderNation = game.nations.firstWhere((n) => n.nationTag == activeBattle.defenderTag);
+
+      final attackerArmyInK = activeBattle.attackerArmy / 1000.0;
+      final defenderArmyInK = activeBattle.defenderArmy / 1000.0;
+      
+      final attackerNumber = attackerArmyInK < 1 
+          ? attackerArmyInK.toStringAsFixed(1)
+          : attackerArmyInK.floor().toString();
+      final defenderNumber = defenderArmyInK < 1 
+          ? defenderArmyInK.toStringAsFixed(1)
+          : defenderArmyInK.floor().toString();
+
+      final battleText = '$attackerNumber ⚔️ $defenderNumber';
+      
+      final textPainter = _cachedTextPainters[regionId] ?? TextPainter(
+        text: TextSpan(
+          text: battleText,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -fontSize * 0.14,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+      );
+
+      if (!_cachedTextPainters.containsKey(regionId)) {
+        textPainter.layout(maxWidth: double.infinity);
+        _cachedTextPainters[regionId] = textPainter;
+      }
+
+      final padding = fontSize * 0.25;
+      final flagWidth = fontSize * 1.0;
+      final totalWidth = textPainter.width + padding * 4 + flagWidth * 2; // Extra space for two flags
+      final height = fontSize * 1.2;
+
+      final bgRect = Rect.fromCenter(
+        center: center,
+        width: totalWidth,
+        height: height,
+      );
+
+      if (bgRect.isEmpty) return;
+
+      deferredText.add((
+        painter: textPainter,
+        offset: Offset(
+          bgRect.left + flagWidth + padding,
+          bgRect.top + (bgRect.height - textPainter.height) / 2 - (fontSize * 0.3),
+        ),
+        bgRect: bgRect,
+        nationTag: '${attackerNation.nationTag.toLowerCase()},${defenderNation.nationTag.toLowerCase()}',
+        isSelected: false,
+        bgColor: Colors.black.withOpacity(0.8),
+      ));
+    } else {
+      // Show normal army count
       final armyInK = effectiveArmy / 1000.0;
       final formattedNumber = armyInK < 1 
           ? armyInK.toStringAsFixed(1)
           : armyInK.floor().toString();
 
-      final provinceSize = bounds.width.abs() * bounds.height.abs();
-      final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
-
       final textPainter = _cachedTextPainters[regionId] ?? TextPainter(
         text: TextSpan(
           text: formattedNumber,
           style: TextStyle(
-            color: Colors.white,
+            color: textColor,
             fontSize: fontSize,
             fontWeight: FontWeight.w600,
             letterSpacing: -fontSize * 0.14,
@@ -1466,6 +1856,11 @@ class MapPainter extends CustomPainter {
 
       if (bgRect.isEmpty) return;
 
+      final isHighlighted = regionId == selectedRegionId && province.owner == game.playerNationTag;
+      final bgColor = isEnemy 
+          ? Colors.black.withOpacity(0.6)
+          : (isHighlighted ? Colors.blue.withOpacity(0.8) : Colors.black.withOpacity(0.6));
+
       deferredText.add((
         painter: textPainter,
         offset: Offset(
@@ -1474,18 +1869,34 @@ class MapPainter extends CustomPainter {
         ),
         bgRect: bgRect,
         nationTag: province.owner.toLowerCase(),
-        isSelected: regionId == selectedRegionId,
+        isSelected: isHighlighted,
+        bgColor: bgColor,
       ));
     }
   }
 
   void _drawMovementArrows(Canvas canvas) {
-    final movementPaint = Paint()
+    final friendlyMovementPaint = Paint()
       ..color = Colors.white.withOpacity(0.8)
       ..strokeWidth = 0.15
       ..style = PaintingStyle.stroke;
 
-    // Draw existing movements
+    final friendlyPotentialMovementPaint = Paint()
+      ..color = Colors.white.withOpacity(0.3)  // Lower opacity for potential moves
+      ..strokeWidth = 0.1  // Thinner line for potential moves
+      ..style = PaintingStyle.stroke;
+
+    final hostileMovementPaint = Paint()
+      ..color = Colors.red.withOpacity(0.8)
+      ..strokeWidth = 0.15
+      ..style = PaintingStyle.stroke;
+
+    final hostilePotentialMovementPaint = Paint()
+      ..color = Colors.red.withOpacity(0.3)  // Lower opacity for potential moves
+      ..strokeWidth = 0.1  // Thinner line for potential moves
+      ..style = PaintingStyle.stroke;
+
+    // Draw existing movements with solid lines
     for (final nation in game.nations) {
       final isPlayerNation = nation.nationTag == game.playerNationTag;
       final canSeeMovements = isPlayerNation || 
@@ -1494,24 +1905,96 @@ class MapPainter extends CustomPainter {
 
       if (canSeeMovements) {
         for (final movement in nation.movements) {
+          final targetProvince = game.provinces.firstWhere(
+            (p) => p.id == movement.destinationProvinceId,
+            orElse: () => Province(
+              id: '',
+              name: '',
+              path: '',
+              population: 0,
+              goldIncome: 0,
+              industry: 0,
+              buildings: [],
+              resourceType: ResourceType.none,
+              army: 0,
+              owner: '',
+              borderingProvinces: [],
+            ),
+          );
+
+          final isHostile = _isHostileMovement(targetProvince);
           _drawOptimizedArrow(
             canvas,
             movement.originProvinceId,
             movement.destinationProvinceId,
-            movementPaint,
+            isHostile ? hostileMovementPaint : friendlyMovementPaint,
           );
         }
       }
     }
 
-    // Draw movement preview
-    if (isMovementMode && movementOriginId != null && selectedRegionId != null && selectedRegionId != movementOriginId) {
-      _drawOptimizedArrow(
-        canvas,
-        movementOriginId!,
-        selectedRegionId!,
-        movementPaint,
+    // Draw potential movement paths when a province is selected
+    if (selectedRegionId != null) {
+      final originProvince = game.provinces.firstWhere(
+        (p) => p.id == selectedRegionId,
+        orElse: () => Province(
+          id: '',
+          name: '',
+          path: '',
+          population: 0,
+          goldIncome: 0,
+          industry: 0,
+          buildings: [],
+          resourceType: ResourceType.none,
+          army: 0,
+          owner: '',
+          borderingProvinces: [],
+        ),
       );
+
+      // Only show movement previews if we own the selected province
+      if (originProvince.owner == game.playerNationTag) {
+        // Draw light lines to all bordering provinces that we can move to
+        for (final borderingId in originProvince.borderingProvinces) {
+          final targetProvince = game.provinces.firstWhere(
+            (p) => p.id == borderingId,
+            orElse: () => Province(
+              id: '',
+              name: '',
+              path: '',
+              population: 0,
+              goldIncome: 0,
+              industry: 0,
+              buildings: [],
+              resourceType: ResourceType.none,
+              army: 0,
+              owner: '',
+              borderingProvinces: [],
+            ),
+          );
+
+          if (_canMoveToProvince(targetProvince)) {
+            final isHostile = _isHostileMovement(targetProvince);
+            if (movementTargetId == targetProvince.id) {
+              // Draw solid line for selected target
+              _drawOptimizedArrow(
+                canvas,
+                selectedRegionId!,
+                targetProvince.id,
+                isHostile ? hostileMovementPaint : friendlyMovementPaint,
+              );
+            } else {
+              // Draw light line for potential target
+              _drawOptimizedArrow(
+                canvas,
+                selectedRegionId!,
+                targetProvince.id,
+                isHostile ? hostilePotentialMovementPaint : friendlyPotentialMovementPaint,
+              );
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1534,7 +2017,8 @@ class MapPainter extends CustomPainter {
     return oldDelegate.selectedRegionId != selectedRegionId ||
            oldDelegate.scale != scale ||
            oldDelegate.isMovementMode != isMovementMode ||
-           oldDelegate.movementOriginId != movementOriginId;
+           oldDelegate.movementOriginId != movementOriginId ||
+           oldDelegate.movementTargetId != movementTargetId;
   }
 
   @override
