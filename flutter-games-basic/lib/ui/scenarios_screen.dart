@@ -19,9 +19,9 @@ class ScenariosScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 1836 Scenario Button
+          // 1914 Scenario Button
           InkWell(
-            onTap: () => context.go('/country-list-1836'),
+            onTap: () => context.go('/country-list-1914'),
             child: Container(
               height: 240,
               margin: const EdgeInsets.only(bottom: 16),
@@ -72,6 +72,8 @@ class ScenariosScreen extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.7),
                         ],
                       ),
                     ),
@@ -82,14 +84,14 @@ class ScenariosScreen extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                      children: const [
                         // Text row at the top
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // Year
-                            const Text(
-                              '1836',
+                            Text(
+                              '1914',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,
@@ -106,7 +108,7 @@ class ScenariosScreen extends StatelessWidget {
                             ),
                             
                             // Era
-                            const Text(
+                            Text(
                               'Age of Industrialization',
                               style: TextStyle(
                                 fontSize: 20,
