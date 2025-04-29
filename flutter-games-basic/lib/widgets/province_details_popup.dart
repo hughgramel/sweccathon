@@ -4,7 +4,7 @@ import '../models/game_types.dart';
 class ProvinceDetailsPopup extends StatelessWidget {
   final Province province;
   final Nation? ownerNation;
-  final Function(int, int)? onRecruitArmy;
+  final VoidCallback? onRecruitArmy;
   final VoidCallback? onClose;
 
   const ProvinceDetailsPopup({
@@ -52,6 +52,9 @@ class ProvinceDetailsPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only enable recruit button if owner has enough reserves
+    final bool canRecruit = ownerNation != null && ownerNation!.armyReserve >= 30000;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -216,12 +219,12 @@ class ProvinceDetailsPopup extends StatelessWidget {
                         margin: const EdgeInsets.symmetric(horizontal: 8),
                         transform: Matrix4.translationValues(0, -2, 0),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6EC53E), // Light green from reference
+                          color: canRecruit ? const Color(0xFF6EC53E) : Colors.grey, // Light green or grey
                           borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
+                          boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF59A700), // Darker green from reference
-                              offset: Offset(0, 4),
+                              color: canRecruit ? const Color(0xFF59A700) : Colors.grey.shade700, // Darker green or grey
+                              offset: const Offset(0, 4),
                               blurRadius: 0,
                             ),
                           ],
@@ -231,11 +234,9 @@ class ProvinceDetailsPopup extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              // Handle Buildings tap
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            onTap: canRecruit ? onRecruitArmy : null,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -243,15 +244,16 @@ class ProvinceDetailsPopup extends StatelessWidget {
                                     '🏛️',
                                     style: TextStyle(
                                       fontSize: 20,
+                                      color: canRecruit ? Colors.white : Colors.white70,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    'Buildings',
+                                    'Recruit',
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: canRecruit ? Colors.white : Colors.white70,
                                     ),
                                   ),
                                 ],

@@ -67,6 +67,7 @@ final world1914 = Game(
       buildQueue: [],
       isAI: false,
       atWarWith: [],
+      armyReserve: 100000,
     ),
     Nation(
       nationTag: 'GER',
@@ -102,6 +103,7 @@ final world1914 = Game(
       buildQueue: [],
       isAI: false,
       atWarWith: [],
+      armyReserve: 150000,
     ),
     Nation(
       nationTag: 'NET',
@@ -123,6 +125,7 @@ final world1914 = Game(
       buildQueue: [],
       isAI: true,
       atWarWith: [],
+      armyReserve: 50000,
     ),
   ],
   provinces: [

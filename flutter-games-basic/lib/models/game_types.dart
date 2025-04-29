@@ -1,3 +1,5 @@
+import 'dart:math';
+
 enum ResourceType {
   gold,
   coal,
@@ -131,7 +133,8 @@ class Nation {
   final List<QueuedBuild>? buildQueue;
   final bool isAI;
   final List<Movement> movements;
-  final List<String> atWarWith;  // List of nation tags this nation is at war with
+  final List<String> atWarWith;
+  final double armyReserve;  // New field for army reserves
 
   Nation({
     required this.nationTag,
@@ -148,7 +151,8 @@ class Nation {
     this.buildQueue,
     required this.isAI,
     this.movements = const [],
-    this.atWarWith = const [],  // Initialize empty list
+    this.atWarWith = const [],
+    required this.armyReserve,  // Add to constructor
   });
 
   Nation copyWith({
@@ -166,7 +170,8 @@ class Nation {
     List<QueuedBuild>? buildQueue,
     bool? isAI,
     List<Movement>? movements,
-    List<String>? atWarWith,  // Add atWarWith to copyWith
+    List<String>? atWarWith,
+    double? armyReserve,  // Add to copyWith
   }) {
     return Nation(
       nationTag: nationTag ?? this.nationTag,
@@ -183,7 +188,8 @@ class Nation {
       buildQueue: buildQueue ?? this.buildQueue,
       isAI: isAI ?? this.isAI,
       movements: movements ?? this.movements,
-      atWarWith: atWarWith ?? this.atWarWith,  // Add atWarWith to copyWith
+      atWarWith: atWarWith ?? this.atWarWith,
+      armyReserve: armyReserve ?? this.armyReserve,  // Add to copyWith
     );
   }
 
@@ -241,7 +247,9 @@ class Game {
   final String mapName;
   final String playerNationTag;
   final List<Nation> nations;
-  final List<Province> provinces;  // All provinces in the game
+  final List<Province> provinces;
+  final Map<String, ResourceGains> _cachedGains = {};
+  final int _lastGainUpdateMonth;
 
   Game({
     required this.id,
@@ -251,15 +259,158 @@ class Game {
     required this.playerNationTag,
     required this.nations,
     required this.provinces,
-  });
+  }) : _lastGainUpdateMonth = DateTime(1914, 1, 1).add(Duration(days: date)).month;
 
   Nation get playerNation => nations.firstWhere((n) => n.nationTag == playerNationTag);
 
-  // Format the date as YYYY-MM-DD
   String get formattedDate {
     final startDate = DateTime(1914, 1, 1);
     final currentDate = startDate.add(Duration(days: date));
     return '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+  }
+
+  int get currentMonth {
+    final startDate = DateTime(1914, 1, 1);
+    final currentDate = startDate.add(Duration(days: date));
+    return currentDate.month;
+  }
+
+  ResourceGains getResourceGains(String nationTag) {
+    // Return cached gains if we're in the same month
+    if (_cachedGains.containsKey(nationTag) && 
+        _cachedGains[nationTag]!.lastCalculatedMonth == currentMonth) {
+      return _cachedGains[nationTag]!;
+    }
+    
+    final nation = nations.firstWhere((n) => n.nationTag == nationTag);
+    
+    // Calculate monthly gains (only once per month)
+    final totalIndustry = nation.getTotalIndustry(provinces);
+    final totalPopulation = nation.getTotalPopulation(provinces);
+    
+    // Calculate monthly gains (30 days worth)
+    final monthlyGoldGain = totalIndustry * 0.03 * 30;
+    final monthlyPopulationGain = totalPopulation * 0.00003 * 30;
+    final monthlyArmyGain = totalPopulation * 0.00010 * 30;
+    
+    final gains = ResourceGains(
+      goldGain: monthlyGoldGain,
+      populationGain: monthlyPopulationGain,
+      armyGain: monthlyArmyGain,
+      lastCalculatedMonth: currentMonth,
+    );
+    
+    _cachedGains[nationTag] = gains;
+    return gains;
+  }
+
+  Game incrementDate() {
+    final newDate = date + 1;
+    final newMonth = DateTime(1914, 1, 1).add(Duration(days: newDate)).month;
+    final isNewMonth = newMonth != currentMonth;
+    
+    // Process movements and get updated nations/provinces
+    final gameAfterMovements = _processMovements();
+    
+    // Only update resources on the first of each month
+    final updatedNations = gameAfterMovements.nations.map((nation) {
+      if (isNewMonth) {
+        final gains = getResourceGains(nation.nationTag);
+        return nation.copyWith(
+          gold: nation.gold + gains.goldGain,
+          armyReserve: nation.armyReserve + gains.armyGain,
+        );
+      }
+      return nation;
+    }).toList();
+
+    final updatedProvinces = gameAfterMovements.provinces.map((province) {
+      if (isNewMonth) {
+        final ownerNation = nations.firstWhere((n) => n.nationTag == province.owner);
+        final gains = getResourceGains(province.owner);
+        
+        // Add all population gain to a random province
+        if (ownerNation.nationProvinces.contains(province.id)) {
+          final random = Random();
+          final isSelected = random.nextDouble() < 1.0 / ownerNation.nationProvinces.length;
+          if (isSelected) {
+            return province.copyWith(
+              population: province.population + gains.populationGain.round(),
+            );
+          }
+        }
+      }
+      return province;
+    }).toList();
+
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: newDate,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: updatedNations,
+      provinces: updatedProvinces,
+    );
+  }
+
+  Game _processMovements() {
+    final updatedNations = nations.map((nation) {
+      final updatedMovements = <Movement>[];
+      var provincesToUpdate = <String, int>{};
+
+      // Process each movement
+      for (final movement in nation.movements) {
+        if (movement.daysLeft > 1) {
+          // Movement continues
+          updatedMovements.add(movement.copyWith(daysLeft: movement.daysLeft - 1));
+        } else {
+          // Movement completes - add army to destination province
+          provincesToUpdate[movement.destinationProvinceId] = 
+            (provincesToUpdate[movement.destinationProvinceId] ?? 0) + movement.armySize;
+          // Remove army from origin province
+          provincesToUpdate[movement.originProvinceId] = 
+            (provincesToUpdate[movement.originProvinceId] ?? 0) - movement.armySize;
+        }
+      }
+
+      // Update nation with new movements
+      return nation.copyWith(movements: updatedMovements);
+    }).toList();
+
+    // Update provinces with completed movements
+    final updatedProvinces = provinces.map((province) {
+      final totalArmyChange = updatedNations.fold<int>(0, (sum, nation) {
+        final completedMovements = nation.movements.where(
+          (m) => m.daysLeft <= 1 && 
+          (m.destinationProvinceId == province.id || m.originProvinceId == province.id)
+        ).toList();
+
+        return sum + completedMovements.fold<int>(0, (moveSum, movement) {
+          if (movement.destinationProvinceId == province.id) {
+            return moveSum + movement.armySize;
+          } else if (movement.originProvinceId == province.id) {
+            return moveSum - movement.armySize;
+          }
+          return moveSum;
+        });
+      });
+
+      if (totalArmyChange != 0) {
+        return province.copyWith(army: province.army + totalArmyChange);
+      }
+      return province;
+    }).toList();
+
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: updatedNations,
+      provinces: updatedProvinces,
+    );
   }
 
   /// Creates a new Game instance with modified gold for a nation
@@ -288,62 +439,12 @@ class Game {
             isAI: nation.isAI,
             movements: nation.movements,
             atWarWith: nation.atWarWith,
+            armyReserve: nation.armyReserve,
           );
         }
         return nation;
       }).toList(),
       provinces: provinces,
-    );
-  }
-
-  // Create a new game with an incremented date
-  Game incrementDate() {
-    // Process movements
-    final updatedNations = nations.map((nation) {
-      final updatedMovements = <Movement>[];
-      var provincesToUpdate = <String, int>{};
-
-      // Process each movement
-      for (final movement in nation.movements) {
-        if (movement.daysLeft > 1) {
-          // Movement continues
-          updatedMovements.add(movement.copyWith(daysLeft: movement.daysLeft - 1));
-        } else {
-          // Movement completes
-          provincesToUpdate[movement.destinationProvinceId] = 
-            (provincesToUpdate[movement.destinationProvinceId] ?? 0) + movement.armySize;
-        }
-      }
-
-      // Update nation with new movements
-      return nation.copyWith(movements: updatedMovements);
-    }).toList();
-
-    // Update provinces with completed movements
-    final updatedProvinces = provinces.map((province) {
-      for (final nation in updatedNations) {
-        final completedMovements = nation.movements
-            .where((m) => m.daysLeft <= 1 && m.destinationProvinceId == province.id)
-            .toList();
-            
-        if (completedMovements.isNotEmpty) {
-          final totalIncomingArmy = completedMovements
-              .fold(0, (sum, movement) => sum + movement.armySize);
-              
-          return province.copyWith(army: province.army + totalIncomingArmy);
-        }
-      }
-      return province;
-    }).toList();
-
-    return Game(
-      id: id,
-      gameName: gameName,
-      date: date + 1,
-      mapName: mapName,
-      playerNationTag: playerNationTag,
-      nations: updatedNations,
-      provinces: updatedProvinces,
     );
   }
 
@@ -442,4 +543,18 @@ class Game {
       provinces: provinces,
     );
   }
+}
+
+class ResourceGains {
+  final double goldGain;
+  final double populationGain;
+  final double armyGain;
+  final int lastCalculatedMonth;  // Add to track when gains were last calculated
+
+  const ResourceGains({
+    required this.goldGain,
+    required this.populationGain,
+    required this.armyGain,
+    required this.lastCalculatedMonth,  // Add to constructor
+  });
 } 

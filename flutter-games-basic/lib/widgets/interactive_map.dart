@@ -13,6 +13,7 @@ import 'nation_details_popup.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
 import 'dart:math';
+import 'dart:async';
 
 
 class InteractiveMap extends StatefulWidget {
@@ -46,6 +47,17 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   final Map<String, Color> _cachedColors = {};
   Map<String, ui.Image> flagImages = {};
   TransformationController transformationController = TransformationController();
+  final Map<String, Rect> _cachedBounds = {};
+  final Map<String, TextPainter> _cachedTextPainters = {};
+  final Map<String, bool> _cachedVisibility = {};
+  static const double MIN_TEXT_SCALE = 4.0;
+
+  // Add viewport culling optimization
+  final GlobalKey _interactiveViewerKey = GlobalKey();
+  Rect? _lastViewport;
+  Matrix4? _lastTransform;
+  bool _isInteracting = false;
+  Timer? _interactionTimer;
 
   // Helper method to convert hex color string to Color
   Color _hexToColor(String hexString) {
@@ -114,14 +126,19 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         currentResearchProgress: 0,
         buildQueue: null,
         isAI: false,
+        armyReserve: 0,
       ),
     );
   }
 
   @override
   void initState() {
+    print('=== InteractiveMap initState ===');
     super.initState();
-    print('InteractiveMap initState');
+    print('Starting to load regions...');
+    loadRegions();
+    _loadFlagImages();
+    print('=== InteractiveMap initState Complete ===');
     
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -131,21 +148,53 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
     
     // Set initial transformation to center the map
+    transformationController = TransformationController();
     transformationController.value = Matrix4.identity()
       ..scale(4.0)  // Initial zoom level
-      ..translate(-550.0,0.0);  // Center the map
-    
-    print('Starting to load regions...');
-    loadRegions();
-    _loadFlagImages();
+      ..translate(-550.0, 0.0);  // Center the map
+
+    // Listen to transformation changes
+    transformationController.addListener(_onTransformationChange);
   }
 
   @override
   void dispose() {
+    print('=== InteractiveMap dispose ===');
+    transformationController.removeListener(_onTransformationChange);
+    _interactionTimer?.cancel();
     _fadeController.dispose();
     _cachedPaths.clear();
     _cachedColors.clear();
     super.dispose();
+    print('=== InteractiveMap dispose Complete ===');
+  }
+
+  void _onTransformationChange() {
+    // Debounce rapid transformation changes
+    _isInteracting = true;
+    _interactionTimer?.cancel();
+    _interactionTimer = Timer(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        setState(() {
+          _isInteracting = false;
+        });
+      }
+    });
+
+    // Only update if transformation has changed significantly
+    final newTransform = transformationController.value;
+    if (_lastTransform != null) {
+      final scale = newTransform.getMaxScaleOnAxis();
+      final lastScale = _lastTransform!.getMaxScaleOnAxis();
+      if ((scale - lastScale).abs() < 0.01) {
+        return;
+      }
+    }
+    _lastTransform = newTransform.clone();
+    
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> loadRegions() async {
@@ -201,38 +250,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     final matrix = transformationController.value;
     // Scale is the first element in the matrix
     return matrix.getMaxScaleOnAxis();
-  }
-
-  void _handleRecruitArmy(String provinceId, int armyChange, int industryChange) {
-    final updatedProvinces = widget.game.provinces.map((p) {
-      if (p.id == provinceId) {
-        return Province(
-          id: p.id,
-          name: p.name,
-          path: p.path,
-          population: p.population,
-          goldIncome: p.goldIncome,
-          industry: p.industry + industryChange,
-          buildings: p.buildings,
-          resourceType: p.resourceType,
-          army: p.army + armyChange,
-          owner: p.owner,
-        );
-      }
-      return p;
-    }).toList();
-
-    final updatedGame = Game(
-      id: widget.game.id,
-      gameName: widget.game.gameName,
-      date: widget.game.date,
-      mapName: widget.game.mapName,
-      playerNationTag: widget.game.playerNationTag,
-      nations: widget.game.nations,
-      provinces: updatedProvinces,
-    );
-
-    widget.onGameUpdate(updatedGame);
   }
 
   void _startMovement() {
@@ -295,6 +312,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
 
   int _getEffectiveArmySize(String provinceId) {
     final province = _getProvinceForRegion(provinceId);
+    if (province.id.isEmpty) return 0;
     
     // Include armies that are in the process of moving
     for (final nation in widget.game.nations) {
@@ -337,8 +355,9 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
     final distance = sqrt(dx * dx + dy * dy);
-    // Use a multiplier of 5 days per unit of distance
-    return max(1, (distance * 5).round());
+    // Use a multiplier of 1 day per unit of distance
+    print("days: ${max(1, (distance * 1).round())}");
+    return max(1, (distance * 1).round());
   }
 
   bool _canSelectProvince(Province province) {
@@ -358,8 +377,22 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     return playerNation.allies.contains(targetProvince.owner);
   }
 
+  bool _hasOutgoingMovement(String provinceId) {
+    // Check if there's any movement originating from this province
+    for (final nation in widget.game.nations) {
+      if (nation.movements.any((m) => m.originProvinceId == provinceId)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void _handleRegionTap(String? regionId) {
+    print('=== Province Selection ===');
+    print('Selected region ID: $regionId');
+    
     if (regionId == null) {
+      print('Clearing selection');
       setState(() {
         selectedRegion = null;
         _showProvinceDetails = false;
@@ -369,25 +402,58 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     }
 
     final targetProvince = _getProvinceForRegion(regionId);
+    print('Found province: ${targetProvince.id} (${targetProvince.name})');
+    print('Province army: ${targetProvince.army}');
+    print('Province owner: ${targetProvince.owner}');
+    
     final targetNation = _getNationForProvince(targetProvince);
+    print('Found nation: ${targetNation?.nationTag}');
+    
     final playerNation = widget.game.nations.firstWhere(
       (n) => n.nationTag == widget.game.playerNationTag,
+      orElse: () => Nation(
+        nationTag: '',
+        name: '',
+        color: '',
+        hexColor: '',
+        nationProvinces: [],
+        allies: [],
+        borderProvinces: [],
+        gold: 0,
+        researchPoints: 0,
+        currentResearchId: null,
+        currentResearchProgress: 0,
+        buildQueue: null,
+        isAI: false,
+        armyReserve: 0,
+      ),
     );
+    
+    print('Player nation: ${playerNation.nationTag}');
     
     setState(() {
       // If clicking the same province that's already selected, unselect it
       if (selectedRegion != null && regionId == selectedRegion!.id) {
+        print('Deselecting current province');
         selectedRegion = null;
         _showProvinceDetails = false;
+        _showNationDetails = false;
         _movementTargetId = null;
         return;
       }
 
       if (selectedRegion != null && regionId != selectedRegion!.id) {
         final originProvince = _getProvinceForRegion(selectedRegion!.id);
-        if (originProvince.army > 0 && _canSelectProvince(originProvince) && _canMoveToProvince(targetProvince)) {
+        print('Checking movement from ${originProvince.id} to ${targetProvince.id}');
+        
+        // Silently ignore movement attempts if province has outgoing movement
+        if (!_hasOutgoingMovement(selectedRegion!.id) && 
+            originProvince.army > 0 && 
+            _canSelectProvince(originProvince) && 
+            _canMoveToProvince(targetProvince)) {
           // If this is a new target, set it as movement target
           if (_movementTargetId != regionId) {
+            print('Setting movement target to $regionId');
             _movementTargetId = regionId;
             return;
           }
@@ -395,7 +461,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       }
 
       // If we're clicking the target province again, confirm movement
-      if (_movementTargetId == regionId) {
+      if (_movementTargetId == regionId && !_hasOutgoingMovement(selectedRegion!.id)) {
+        print('Confirming movement to $regionId');
         final originPath = _cachedPaths[selectedRegion!.id];
         final destPath = _cachedPaths[regionId];
         if (originPath != null && destPath != null) {
@@ -414,11 +481,14 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
 
       // Normal province selection
       if (_canSelectProvince(targetProvince)) {
+        print('Selecting province ${targetProvince.id}');
         selectedRegion = Region(id: regionId, path: '');
         _showProvinceDetails = false;
+        _showNationDetails = false;
         _movementTargetId = null;
       } else if (targetNation != null && targetNation.nationTag != playerNation.nationTag) {
         // Show nation details popup for foreign provinces
+        print('Showing nation details for ${targetNation.nationTag}');
         setState(() {
           selectedRegion = Region(id: regionId, path: '');
           _showProvinceDetails = false;
@@ -428,6 +498,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         });
       }
     });
+    print('=== Province Selection Complete ===');
   }
 
   void _startMovementToProvince(String destinationId, int daysRequired) {
@@ -453,24 +524,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       return nation;
     }).toList();
 
-    final updatedProvinces = widget.game.provinces.map((p) {
-      if (p.id == selectedRegion!.id) {
-        return Province(
-          id: p.id,
-          name: p.name,
-          path: p.path,
-          population: p.population,
-          goldIncome: p.goldIncome,
-          industry: p.industry,
-          buildings: p.buildings,
-          resourceType: p.resourceType,
-          army: 0,
-          owner: p.owner,
-        );
-      }
-      return p;
-    }).toList();
-
+    // Don't reduce the army in the origin province anymore
     final updatedGame = Game(
       id: widget.game.id,
       gameName: widget.game.gameName,
@@ -478,7 +532,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       mapName: widget.game.mapName,
       playerNationTag: widget.game.playerNationTag,
       nations: updatedNations,
-      provinces: updatedProvinces,
+      provinces: widget.game.provinces,
     );
 
     widget.onGameUpdate(updatedGame);
@@ -488,9 +542,94 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     });
   }
 
+  void _cancelMovementFromProvince(String provinceId) {
+    print('=== Canceling Movement ===');
+    print('From province: $provinceId');
+    
+    try {
+      final updatedNations = widget.game.nations.map((nation) {
+        if (nation.nationTag == widget.game.playerNationTag) {
+          final updatedMovements = nation.movements.where((m) => m.originProvinceId != provinceId).toList();
+          print('Removed movement from ${nation.nationTag}');
+          return nation.copyWith(movements: updatedMovements);
+        }
+        return nation;
+      }).toList();
+
+      final updatedGame = Game(
+        id: widget.game.id,
+        gameName: widget.game.gameName,
+        date: widget.game.date,
+        mapName: widget.game.mapName,
+        playerNationTag: widget.game.playerNationTag,
+        nations: updatedNations,
+        provinces: widget.game.provinces,
+      );
+
+      widget.onGameUpdate(updatedGame);
+      print('=== Movement Canceled ===');
+    } catch (e) {
+      print('Error canceling movement: $e');
+      print('Stack trace: ${StackTrace.current}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error canceling movement: $e'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(InteractiveMap oldWidget) {
+    print('=== InteractiveMap didUpdateWidget ===');
+    super.didUpdateWidget(oldWidget);
+    print('Game ID changed: ${oldWidget.game.id != widget.game.id}');
+    print('Player nation changed: ${oldWidget.game.playerNationTag != widget.game.playerNationTag}');
+    print('Province count changed: ${oldWidget.game.provinces.length != widget.game.provinces.length}');
+    
+    // Check for movements when date changes
+    if (oldWidget.game.date != widget.game.date) {
+      print('\n=== Movement Status for ${widget.game.date} ===');
+      
+      // Track total movements
+      int totalMovements = 0;
+      int completingMovements = 0;
+      
+      for (final nation in widget.game.nations) {
+        if (nation.movements.isEmpty) continue;
+        
+        print('\nNation: ${nation.nationTag}');
+        for (final movement in nation.movements) {
+          totalMovements++;
+          
+          // Check if movement will complete this tick
+          final willComplete = movement.daysLeft == 1;
+          if (willComplete) completingMovements++;
+          
+          print('Movement:');
+          print('  From: ${movement.originProvinceId}');
+          print('  To: ${movement.destinationProvinceId}');
+          print('  Army size: ${movement.armySize}');
+          print('  Days left: ${movement.daysLeft}');
+          print('  Status: ${willComplete ? 'Completing this turn' : 'In progress'}');
+        }
+      }
+      
+      print('\nMovement Summary:');
+      print('Total active movements: $totalMovements');
+      print('Movements completing this turn: $completingMovements');
+      print('=== End Movement Status ===\n');
+    }
+    
+    print('=== InteractiveMap didUpdateWidget Complete ===');
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('=== InteractiveMap build ===');
     if (_isLoading) {
+      print('Map is still loading');
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -509,10 +648,21 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       );
     }
 
+    print('Building map with ${regions.length} regions');
+    print('Selected region: ${selectedRegion?.id}');
+    print('Show province details: $_showProvinceDetails');
+    print('Show nation details: $_showNationDetails');
+    print('Movement mode: $_isMovementMode');
+    print('Movement origin: $_movementOriginId');
+    print('Movement target: $_movementTargetId');
+
     final selectedProvince = selectedRegion != null ? _getProvinceForRegion(selectedRegion!.id) : null;
     final selectedNation = selectedProvince != null && selectedProvince.id.isNotEmpty 
         ? _getNationForProvince(selectedProvince) 
         : null;
+
+    print('Selected province: ${selectedProvince?.id}');
+    print('Selected nation: ${selectedNation?.nationTag}');
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -520,14 +670,12 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         children: [
           Center(
             child: InteractiveViewer(
+              key: _interactiveViewerKey,
               transformationController: transformationController,
               boundaryMargin: const EdgeInsets.all(8.0),
-              minScale: 1.0,  // Prevent zooming out too far
+              minScale: 1.0,
               maxScale: 20.0,
               constrained: false,
-              onInteractionUpdate: (details) {
-                setState(() {});
-              },
               child: RepaintBoundary(
                 child: CustomPaint(
                   size: const Size(1200, 480),
@@ -543,6 +691,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     isMovementMode: _isMovementMode,
                     movementOriginId: _movementOriginId,
                   ),
+                  isComplex: true,
+                  willChange: _isInteracting,
                 ),
               ),
             ),
@@ -574,11 +724,11 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                                       margin: const EdgeInsets.symmetric(horizontal: 8),
                                       transform: Matrix4.translationValues(0, -2, 0),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE57373), // Light red
+                                        color: const Color(0xFFE57373),
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: const [
                                           BoxShadow(
-                                            color: Color(0xFFC62828), // Darker red
+                                            color: Color(0xFFC62828),
                                             offset: Offset(0, 4),
                                             blurRadius: 0,
                                           ),
@@ -596,46 +746,42 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                                           },
                                           child: const Padding(
                                             padding: EdgeInsets.symmetric(vertical: 12),
-                                            child: Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 24,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  '❌',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Cancel',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                  Expanded(
-                                    flex: 3,
-                                    child: Container(
-                                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        'Move to ${_getProvinceForRegion(_movementTargetId!).name}',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                  
                                   Expanded(
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(horizontal: 8),
                                       transform: Matrix4.translationValues(0, -2, 0),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF6EC53E), // Light green
+                                        color: const Color(0xFF6EC53E),
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: const [
                                           BoxShadow(
-                                            color: Color(0xFF4A9E1C), // Darker green
+                                            color: Color(0xFF4A9E1C),
                                             offset: Offset(0, 4),
                                             blurRadius: 0,
                                           ),
@@ -664,10 +810,26 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                                           },
                                           child: const Padding(
                                             padding: EdgeInsets.symmetric(vertical: 12),
-                                            child: Icon(
-                                              Icons.check,
-                                              color: Colors.white,
-                                              size: 24,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  '✓',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Move',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -680,94 +842,14 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  transform: Matrix4.translationValues(0, -2, 0),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFA726), // Light orange
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0xFFF57C00), // Darker orange
-                                        offset: Offset(0, 4),
-                                        blurRadius: 0,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: () {
-                                        // Add recruit functionality
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Recruit',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                              if (_hasOutgoingMovement(selectedRegion!.id)) ...[
+                                Expanded(
+                                  child: _buildCancelMovementButton(),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
+                                const SizedBox(width: 8),
+                              ],
                               Expanded(
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  transform: Matrix4.translationValues(0, -2, 0),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF67B9E7), // Light blue
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Color(0xFF4792BA), // Darker blue
-                                        offset: Offset(0, 4),
-                                        blurRadius: 0,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
-                                      onTap: () {
-                                        setState(() {
-                                          _showProvinceDetails = true;
-                                        });
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              'Details',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                child: _buildDetailsButton(),
                               ),
                             ],
                           ),
@@ -778,13 +860,6 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                     ProvinceDetailsPopup(
                       province: selectedProvince,
                       ownerNation: selectedNation,
-                      onRecruitArmy: selectedProvince.army >= 10 
-                        ? (armyChange, industryChange) => _handleRecruitArmy(
-                            selectedProvince.id,
-                            armyChange,
-                            industryChange,
-                          )
-                        : null,
                       onClose: () {
                         setState(() {
                           _showProvinceDetails = false;
@@ -915,6 +990,103 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       ),
     );
   }
+
+  Widget _buildCancelMovementButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      transform: Matrix4.translationValues(0, -2, 0),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE57373),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFFC62828),
+            offset: Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            _cancelMovementFromProvince(selectedRegion!.id);
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '❌',
+                  style: TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Cancel Movement',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailsButton() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      transform: Matrix4.translationValues(0, -2, 0),
+      decoration: BoxDecoration(
+        color: const Color(0xFF67B9E7),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0xFF4792BA),
+            offset: Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            setState(() {
+              _showProvinceDetails = true;
+            });
+          },
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Details',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class MapPainter extends CustomPainter {
@@ -928,6 +1100,9 @@ class MapPainter extends CustomPainter {
   final Map<String, ui.Image> flagImages;
   final bool isMovementMode;
   final String? movementOriginId;
+  final Map<String, Rect> _cachedBounds = {};
+  final Map<String, TextPainter> _cachedTextPainters = {};
+  static const double MIN_TEXT_SCALE = 4.0;
 
   final List<({
     TextPainter painter,
@@ -948,11 +1123,18 @@ class MapPainter extends CustomPainter {
     required this.flagImages,
     required this.isMovementMode,
     required this.movementOriginId,
-  });
+  }) {
+    // Pre-calculate bounds for all paths
+    for (final entry in cachedPaths.entries) {
+      if (!_cachedBounds.containsKey(entry.key)) {
+        _cachedBounds[entry.key] = entry.value.getBounds();
+      }
+    }
+  }
 
-  int _getEffectiveArmySize(String provinceId) {
-    final province = game.provinces.firstWhere(
-      (p) => p.id == provinceId,
+  Province _getProvinceForRegion(String regionId) {
+    return game.provinces.firstWhere(
+      (p) => p.id == regionId,
       orElse: () => Province(
         id: '',
         name: '',
@@ -966,6 +1148,11 @@ class MapPainter extends CustomPainter {
         owner: '',
       ),
     );
+  }
+
+  int _getEffectiveArmySize(String provinceId) {
+    final province = _getProvinceForRegion(provinceId);
+    if (province.id.isEmpty) return 0;
     
     // Include armies that are in the process of moving
     for (final nation in game.nations) {
@@ -985,255 +1172,52 @@ class MapPainter extends CustomPainter {
     return province.army;  // Return actual army size if no movement
   }
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Skip text rendering if zoom is too low
-    final shouldRenderText = scale >= 4.0;
-
-    final borderPaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 0.05
-      ..style = PaintingStyle.stroke;
-
-    deferredText.clear();
-
-    // First pass: Draw all provinces
-    for (final region in regions) {
-      final path = cachedPaths[region.id]!;
-      final color = cachedColors[region.id]!;
+  void _drawDeferredText(Canvas canvas) {
+    for (final textItem in deferredText) {
+      if (textItem.bgRect.isEmpty) continue;
       
-      canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
-      canvas.drawPath(path, borderPaint);
+      // Draw background rectangle with smaller radius
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          textItem.bgRect,
+          Radius.circular(textItem.bgRect.height * 0.15),
+        ),
+        Paint()..color = textItem.isSelected 
+          ? Colors.blue.withOpacity(0.8) 
+          : Colors.black.withOpacity(0.6),
+      );
 
-      if (shouldRenderText) {
-        final province = game.provinces.firstWhere(
-          (p) => p.id == region.id,
-          orElse: () => Province(
-            id: '',
-            name: '',
-            path: '',
-            population: 0,
-            goldIncome: 0,
-            industry: 0,
-            buildings: [],
-            resourceType: ResourceType.none,
-            army: 0,
-            owner: '',
-          ),
-        );
+      // Draw flag on the left side with adjusted proportions
+      final flagRect = Rect.fromLTWH(
+        textItem.bgRect.left + textItem.bgRect.height * 0.08,
+        textItem.bgRect.top + textItem.bgRect.height * 0.15,
+        textItem.bgRect.height * 0.7,
+        textItem.bgRect.height * 0.7,
+      );
 
-        final effectiveArmy = _getEffectiveArmySize(region.id);
-        
-        if (effectiveArmy > 0) {
-          // Get the owning nation of this province
-          final ownerNation = game.nations.firstWhere(
-            (n) => n.nationTag == province.owner,
-            orElse: () => Nation(
-              nationTag: '',
-              name: '',
-              color: '',
-              hexColor: '',
-              nationProvinces: [],
-              allies: [],
-              borderProvinces: [],
-              gold: 0,
-              researchPoints: 0,
-              currentResearchId: null,
-              currentResearchProgress: 0,
-              buildQueue: null,
-              isAI: false,
-            ),
+      // Draw flag image
+      try {
+        final flagImage = flagImages[textItem.nationTag];
+        if (flagImage != null) {
+          canvas.drawImageRect(
+            flagImage,
+            Rect.fromLTWH(0, 0, flagImage.width.toDouble(), flagImage.height.toDouble()),
+            flagRect,
+            Paint(),
           );
-
-          // Get the player's nation
-          final playerNation = game.nations.firstWhere(
-            (n) => n.nationTag == game.playerNationTag,
-            orElse: () => Nation(
-              nationTag: '',
-              name: '',
-              color: '',
-              hexColor: '',
-              nationProvinces: [],
-              allies: [],
-              borderProvinces: [],
-              gold: 0,
-              researchPoints: 0,
-              currentResearchId: null,
-              currentResearchProgress: 0,
-              buildQueue: null,
-              isAI: false,
-            ),
-          );
-
-          // Only show armies if:
-          // 1. Province is owned by an ally (including player's own nation)
-          // 2. OR Province is in player's border provinces
-          final isAllied = ownerNation.nationTag == playerNation.nationTag || 
-                         playerNation.allies.contains(ownerNation.nationTag);
-          final isBorderProvince = playerNation.borderProvinces.contains(province.id) || ownerNation.borderProvinces.contains(province.id);
-          
-          if (isAllied || isBorderProvince) {
-            final bounds = path.getBounds();
-            final center = bounds.center;
-            
-            // Format army number divided by 1000
-            final armyInK = effectiveArmy / 1000.0;
-            String formattedNumber;
-            
-            if (armyInK < 1) {
-                formattedNumber = armyInK.toStringAsFixed(1);
-            } else {
-                formattedNumber = armyInK.floor().toString();
-            }
-            
-            final provinceSize = bounds.width.abs() * bounds.height.abs();
-            final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
-            
-            final textSpan = TextSpan(
-              text: formattedNumber,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: fontSize,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -fontSize * 0.14, // GAP HERE
-              ),
-            );
-            
-            final provincePainter = TextPainter(
-              text: textSpan,
-              textDirection: TextDirection.ltr,
-              textAlign: TextAlign.left,
-            );
-            
-            provincePainter.layout(maxWidth: double.infinity);
-            final requiredWidth = provincePainter.width;
-            
-            // Calculate rectangle dimensions with smaller proportions
-            final padding = fontSize * 0.25;
-            final flagWidth = fontSize * 1.0;
-            final totalWidth = requiredWidth + padding * 3 + flagWidth;
-            final height = fontSize * 1.2;
-
-            final bgRect = Rect.fromCenter(
-              center: center,
-              width: totalWidth,
-              height: height,
-            );
-            
-            deferredText.add((
-              painter: provincePainter,
-              offset: Offset(
-                bgRect.left + flagWidth + padding * 2,
-                bgRect.top + (bgRect.height - provincePainter.height) / 2 - (fontSize * 0.3),
-              ),
-              bgRect: bgRect,
-              nationTag: province.owner.toLowerCase(),
-              isSelected: region.id == selectedRegionId,
-            ));
-          }
         }
+      } catch (e) {
+        print('Error drawing flag: $e');
       }
-    }
 
-    // Draw movement arrows
-    final movementPaint = Paint()
-      ..color = Colors.white.withOpacity(0.8)
-      ..strokeWidth = 0.15
-      ..style = PaintingStyle.stroke;
-
-    // Draw existing movements
-    for (final nation in game.nations) {
-      final isPlayerNation = nation.nationTag == game.playerNationTag;
-      final canSeeMovements = isPlayerNation || 
-        game.playerNation.allies.contains(nation.nationTag) ||
-        nation.borderProvinces.any((p) => game.playerNation.nationProvinces.contains(p));
-
-      if (canSeeMovements) {
-        for (final movement in nation.movements) {
-          final originPath = cachedPaths[movement.originProvinceId];
-          final destPath = cachedPaths[movement.destinationProvinceId];
-          
-          if (originPath != null && destPath != null) {
-            final originBounds = originPath.getBounds();
-            final destBounds = destPath.getBounds();
-            
-            _drawDottedArrow(
-              canvas,
-              originBounds.center,
-              destBounds.center,
-              movementPaint,
-            );
-          }
-        }
-      }
-    }
-
-    // Draw movement preview if in movement mode
-    if (isMovementMode && movementOriginId != null) {
-      final originPath = cachedPaths[movementOriginId];
-      if (originPath != null) {
-        final originBounds = originPath.getBounds();
-        
-        // Draw preview to mouse position or selected province
-        if (selectedRegionId != null && selectedRegionId != movementOriginId) {
-          final destPath = cachedPaths[selectedRegionId];
-          if (destPath != null) {
-            final destBounds = destPath.getBounds();
-            _drawDottedArrow(
-              canvas,
-              originBounds.center,
-              destBounds.center,
-              movementPaint,
-            );
-          }
-        }
-      }
-    }
-
-    // Draw army displays last
-    if (shouldRenderText) {
-      for (final textItem in deferredText) {
-        // Draw background rectangle with smaller radius
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            textItem.bgRect,
-            Radius.circular(textItem.bgRect.height * 0.15),
-          ),
-          Paint()..color = textItem.isSelected 
-            ? Colors.blue.withOpacity(0.8) 
-            : Colors.black.withOpacity(0.6),
-        );
-
-        // Draw flag on the left side with adjusted proportions
-        final flagRect = Rect.fromLTWH(
-          textItem.bgRect.left + textItem.bgRect.height * 0.08,
-          textItem.bgRect.top + textItem.bgRect.height * 0.15,
-          textItem.bgRect.height * 0.7,
-          textItem.bgRect.height * 0.7,
-        );
-
-        // Draw flag image
-        try {
-          final flagImage = flagImages[textItem.nationTag];
-          if (flagImage != null) {
-            canvas.drawImageRect(
-              flagImage,
-              Rect.fromLTWH(0, 0, flagImage.width.toDouble(), flagImage.height.toDouble()),
-              flagRect,
-              Paint(),
-            );
-          }
-        } catch (e) {
-          print('Error drawing flag: $e');
-        }
-
-        // Draw text
-        textItem.painter.paint(canvas, textItem.offset);
-      }
+      // Draw text
+      textItem.painter.paint(canvas, textItem.offset);
     }
   }
 
   void _drawDottedArrow(Canvas canvas, Offset start, Offset end, Paint paint) {
+    if (start == end) return;
+    
     // Calculate direction vector
     final dx = end.dx - start.dx;
     final dy = end.dy - start.dy;
@@ -1282,11 +1266,11 @@ class MapPainter extends CustomPainter {
     final arrowPath = Path()
       ..moveTo(arrowTip.dx, arrowTip.dy)
       ..lineTo(
-        arrowBase.dx + perpX * arrowSize * 0.3,  // Reduced from 0.5 to 0.3 for thinner arrow head
+        arrowBase.dx + perpX * arrowSize * 0.3,
         arrowBase.dy + perpY * arrowSize * 0.3,
       )
       ..lineTo(
-        arrowBase.dx - perpX * arrowSize * 0.3,  // Reduced from 0.5 to 0.3 for thinner arrow head
+        arrowBase.dx - perpX * arrowSize * 0.3,
         arrowBase.dy - perpY * arrowSize * 0.3,
       )
       ..close();
@@ -1295,18 +1279,225 @@ class MapPainter extends CustomPainter {
   }
 
   @override
+  void paint(Canvas canvas, Size size) {
+    // Skip text rendering if zoom is too low
+    final shouldRenderText = scale >= MIN_TEXT_SCALE;
+
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 0.05
+      ..style = PaintingStyle.stroke;
+
+    deferredText.clear();
+
+    // First pass: Draw all provinces
+    for (final region in regions) {
+      final path = cachedPaths[region.id];
+      if (path == null) continue;
+      
+      final color = cachedColors[region.id];
+      if (color == null) continue;
+      
+      // Check if the region is visible in the current viewport
+      final bounds = _cachedBounds[region.id];
+      if (bounds == null || !_isVisible(bounds, size)) continue;
+      
+      canvas.drawPath(path, Paint()..color = color..style = PaintingStyle.fill);
+      canvas.drawPath(path, borderPaint);
+
+      if (shouldRenderText) {
+        final province = _getProvinceForRegion(region.id);
+        if (province.id.isEmpty) continue;
+        
+        final effectiveArmy = _getEffectiveArmySize(region.id);
+        if (effectiveArmy > 0) {
+          _addDeferredText(region.id, province, bounds, effectiveArmy);
+        }
+      }
+    }
+
+    // Draw movement arrows with optimized arrow drawing
+    if (shouldRenderText) {
+      _drawMovementArrows(canvas);
+      _drawDeferredText(canvas);
+    }
+  }
+
+  bool _isVisible(Rect bounds, Size size) {
+    // Simple viewport culling
+    return bounds.overlaps(Offset.zero & size);
+  }
+
+  void _addDeferredText(String regionId, Province province, Rect bounds, int effectiveArmy) {
+    if (province.owner.isEmpty) return;
+    
+    final ownerNation = game.nations.firstWhere(
+      (n) => n.nationTag == province.owner,
+      orElse: () => Nation(
+        nationTag: '',
+        name: '',
+        color: '',
+        hexColor: '',
+        nationProvinces: [],
+        allies: [],
+        borderProvinces: [],
+        gold: 0,
+        researchPoints: 0,
+        currentResearchId: null,
+        currentResearchProgress: 0,
+        buildQueue: null,
+        isAI: false,
+        armyReserve: 0,
+      ),
+    );
+
+    if (ownerNation.nationTag.isEmpty) return;
+
+    final playerNation = game.nations.firstWhere(
+      (n) => n.nationTag == game.playerNationTag,
+      orElse: () => Nation(
+        nationTag: '',
+        name: '',
+        color: '',
+        hexColor: '',
+        nationProvinces: [],
+        allies: [],
+        borderProvinces: [],
+        gold: 0,
+        researchPoints: 0,
+        currentResearchId: null,
+        currentResearchProgress: 0,
+        buildQueue: null,
+        isAI: false,
+        armyReserve: 0,
+      ),
+    );
+
+    if (playerNation.nationTag.isEmpty) return;
+
+    final isAllied = ownerNation.nationTag == playerNation.nationTag || 
+                     playerNation.allies.contains(ownerNation.nationTag);
+    final isBorderProvince = playerNation.borderProvinces.contains(province.id);
+
+    if (isAllied || isBorderProvince) {
+      final center = bounds.center;
+      final armyInK = effectiveArmy / 1000.0;
+      final formattedNumber = armyInK < 1 
+          ? armyInK.toStringAsFixed(1)
+          : armyInK.floor().toString();
+
+      final provinceSize = bounds.width.abs() * bounds.height.abs();
+      final fontSize = (provinceSize * 0.0002).clamp(0.8, 1.4);
+
+      final textPainter = _cachedTextPainters[regionId] ?? TextPainter(
+        text: TextSpan(
+          text: formattedNumber,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -fontSize * 0.14,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.left,
+      );
+
+      if (!_cachedTextPainters.containsKey(regionId)) {
+        textPainter.layout(maxWidth: double.infinity);
+        _cachedTextPainters[regionId] = textPainter;
+      }
+
+      final padding = fontSize * 0.25;
+      final flagWidth = fontSize * 1.0;
+      final totalWidth = textPainter.width + padding * 3 + flagWidth;
+      final height = fontSize * 1.2;
+
+      final bgRect = Rect.fromCenter(
+        center: center,
+        width: totalWidth,
+        height: height,
+      );
+
+      if (bgRect.isEmpty) return;
+
+      deferredText.add((
+        painter: textPainter,
+        offset: Offset(
+          bgRect.left + flagWidth + padding * 2,
+          bgRect.top + (bgRect.height - textPainter.height) / 2 - (fontSize * 0.3),
+        ),
+        bgRect: bgRect,
+        nationTag: province.owner.toLowerCase(),
+        isSelected: regionId == selectedRegionId,
+      ));
+    }
+  }
+
+  void _drawMovementArrows(Canvas canvas) {
+    final movementPaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..strokeWidth = 0.15
+      ..style = PaintingStyle.stroke;
+
+    // Draw existing movements
+    for (final nation in game.nations) {
+      final isPlayerNation = nation.nationTag == game.playerNationTag;
+      final canSeeMovements = isPlayerNation || 
+        game.playerNation.allies.contains(nation.nationTag) ||
+        nation.borderProvinces.any((p) => game.playerNation.nationProvinces.contains(p));
+
+      if (canSeeMovements) {
+        for (final movement in nation.movements) {
+          _drawOptimizedArrow(
+            canvas,
+            movement.originProvinceId,
+            movement.destinationProvinceId,
+            movementPaint,
+          );
+        }
+      }
+    }
+
+    // Draw movement preview
+    if (isMovementMode && movementOriginId != null && selectedRegionId != null && selectedRegionId != movementOriginId) {
+      _drawOptimizedArrow(
+        canvas,
+        movementOriginId!,
+        selectedRegionId!,
+        movementPaint,
+      );
+    }
+  }
+
+  void _drawOptimizedArrow(Canvas canvas, String fromId, String toId, Paint paint) {
+    final originBounds = _cachedBounds[fromId];
+    final destBounds = _cachedBounds[toId];
+    
+    if (originBounds != null && destBounds != null) {
+      _drawDottedArrow(
+        canvas,
+        originBounds.center,
+        destBounds.center,
+        paint,
+      );
+    }
+  }
+
+  @override
   bool shouldRepaint(MapPainter oldDelegate) {
     return oldDelegate.selectedRegionId != selectedRegionId ||
-           oldDelegate.game != game ||
-           oldDelegate.scale != scale;
+           oldDelegate.scale != scale ||
+           oldDelegate.isMovementMode != isMovementMode ||
+           oldDelegate.movementOriginId != movementOriginId;
   }
 
   @override
   bool hitTest(Offset position) {
     bool hitRegion = false;
     for (final region in regions) {
-      final path = cachedPaths[region.id]!;
-      if (path.contains(position)) {
+      final path = cachedPaths[region.id];
+      if (path != null && path.contains(position)) {
         onRegionSelected(region.id);
         hitRegion = true;
         break;

@@ -37,7 +37,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   bool _isPaused = true;
   int _currentSpeed = 1;  // Track current speed
 
-  String _formatNumber(num number) {
+  String _formatNumber(num number, {bool forGain = false}) {
     if (number == 0) return "0";
     
     bool isNegative = number < 0;
@@ -52,19 +52,40 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
     }
     
     String formatted;
-    if (number >= 100) {
-      formatted = number.round().toString();
-    } else if (number >= 10) {
-      formatted = number.toStringAsFixed(1);
-      if (formatted.endsWith('.0')) {
-        formatted = formatted.substring(0, formatted.length - 2);
+    if (forGain) {
+      // For gains, always show 3 significant digits
+      if (number >= 100) {
+        formatted = number.round().toString();
+      } else if (number >= 10) {
+        formatted = number.toStringAsFixed(1);
+      } else {
+        formatted = number.toStringAsFixed(2);
+      }
+      // Remove trailing zeros after decimal point
+      if (formatted.contains('.')) {
+        while (formatted.endsWith('0')) {
+          formatted = formatted.substring(0, formatted.length - 1);
+        }
+        if (formatted.endsWith('.')) {
+          formatted = formatted.substring(0, formatted.length - 1);
+        }
       }
     } else {
-      formatted = number.toStringAsFixed(2);
-      if (formatted.endsWith('0')) {
-        formatted = formatted.substring(0, formatted.length - 1);
+      // Original formatting for non-gain numbers
+      if (number >= 100) {
+        formatted = number.round().toString();
+      } else if (number >= 10) {
+        formatted = number.toStringAsFixed(1);
         if (formatted.endsWith('.0')) {
           formatted = formatted.substring(0, formatted.length - 2);
+        }
+      } else {
+        formatted = number.toStringAsFixed(2);
+        if (formatted.endsWith('0')) {
+          formatted = formatted.substring(0, formatted.length - 1);
+          if (formatted.endsWith('.0')) {
+            formatted = formatted.substring(0, formatted.length - 2);
+          }
         }
       }
     }
@@ -380,42 +401,31 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    _ResourceItem(
-                                      emoji: '💰',
-                                      value: _formatNumber(currentGame.playerNation.gold),
+                                    ResourceBar(
+                                      nation: currentGame.playerNation,
+                                      provinces: currentGame.provinces,
+                                      game: currentGame,
                                     ),
-                                    _ResourceItem(
-                                      emoji: '👥',
-                                      value: _formatNumber(currentGame.playerNation.getTotalPopulation(currentGame.provinces)),
-                                    ),
-                                    _ResourceItem(
-                                      emoji: '🏭',
-                                      value: _formatNumber(currentGame.playerNation.getTotalIndustry(currentGame.provinces)),
-                                    ),
-                                    _ResourceItem(
-                                      emoji: '⚔️',
-                                      value: _formatNumber(currentGame.playerNation.getTotalArmy(currentGame.provinces)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Menu button
-                              Container(
-                                margin: const EdgeInsets.only(left: 12),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(8),
-                                    onTap: () => _showMenuModal(context),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(4),
-                                      child: Icon(
-                                        Icons.menu,
-                                        color: Colors.black87,
-                                        size: 20,
+                                    // Menu button
+                                    Container(
+                                      margin: const EdgeInsets.only(left: 12),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(8),
+                                          onTap: () => _showMenuModal(context),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(
+                                              Icons.menu,
+                                              color: Colors.black87,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -627,10 +637,12 @@ class GridPainter extends CustomPainter {
 class _ResourceItem extends StatelessWidget {
   final String emoji;
   final String value;
+  final String? gain;
 
   const _ResourceItem({
     required this.emoji,
     required this.value,
+    this.gain,
   });
 
   @override
@@ -648,6 +660,17 @@ class _ResourceItem extends StatelessWidget {
             fontSize: 17,
           ),
         ),
+        if (gain != null) ...[
+          const SizedBox(width: 4),
+          Text(
+            '+$gain',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.green.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }

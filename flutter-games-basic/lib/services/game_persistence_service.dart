@@ -116,6 +116,7 @@ class GamePersistenceService {
       'isAI': nation.isAI,
       'movements': nation.movements.map((movement) => _movementToJson(movement)).toList(),
       'atWarWith': nation.atWarWith,
+      'armyReserve': nation.armyReserve,
     };
   }
 
@@ -207,6 +208,7 @@ class GamePersistenceService {
               (json['movements'] as List).map((x) => _movementFromJson(x as Map<String, dynamic>)))
           : [],
       atWarWith: List<String>.from(json['atWarWith'] as List? ?? []),
+      armyReserve: (json['armyReserve'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -331,5 +333,25 @@ class GamePersistenceService {
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('save_slot_$slotNumber');
+  }
+
+  /// Converts a ResourceGains object to JSON
+  Map<String, dynamic> _resourceGainsToJson(ResourceGains gains) {
+    return {
+      'goldGain': gains.goldGain,
+      'populationGain': gains.populationGain,
+      'armyGain': gains.armyGain,
+      'lastCalculatedMonth': gains.lastCalculatedMonth,
+    };
+  }
+
+  /// Creates a ResourceGains object from JSON
+  ResourceGains _resourceGainsFromJson(Map<String, dynamic> json) {
+    return ResourceGains(
+      goldGain: (json['goldGain'] as num).toDouble(),
+      populationGain: (json['populationGain'] as num).toDouble(),
+      armyGain: (json['armyGain'] as num).toDouble(),
+      lastCalculatedMonth: (json['lastCalculatedMonth'] as num).toInt(),
+    );
   }
 } 
