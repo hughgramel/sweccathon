@@ -37,6 +37,40 @@ class _SaveGameScreenState extends State<SaveGameScreen> {
     }
   }
 
+  Future<void> _showDeleteConfirmation(BuildContext context, int index) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Save Game'),
+          content: const Text('Are you sure you want to delete this save game? This action cannot be undone.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+              onPressed: () async {
+                await _gamePersistence.deleteSaveSlot(index);
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  await _loadSaveSlots(); // Refresh the list
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildSaveSlot(int index) {
     final game = _saveSlots[index];
     final bool isEmpty = game == null;
@@ -57,6 +91,13 @@ class _SaveGameScreenState extends State<SaveGameScreen> {
         subtitle: isEmpty 
           ? const Text('No saved game')
           : Text('Last played: ${DateTime.now().toString().split('.')[0]}'),
+        trailing: isEmpty 
+          ? null 
+          : IconButton(
+              icon: const Icon(Icons.delete_forever, color: Colors.red),
+              onPressed: () => _showDeleteConfirmation(context, index),
+              tooltip: 'Delete save game',
+            ),
         onTap: () async {
           if (isNewGame) {
             // Save new game to this slot

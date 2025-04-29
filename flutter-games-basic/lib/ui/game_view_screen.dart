@@ -342,9 +342,14 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
             ),
 
             // Second layer: Interactive map
-            InteractiveMap(
-              game: currentGame,
-              onGameUpdate: _handleGameUpdate,
+            Center(
+              child: Container(
+                color: const Color.fromRGBO(143, 178, 187, 1.0),
+                child: InteractiveMap(
+                  game: currentGame,
+                  onGameUpdate: _handleGameUpdate,
+                ),
+              ),
             ),
             
             // Top layers: UI elements

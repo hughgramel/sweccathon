@@ -291,6 +291,11 @@ class GamePersistenceService {
     return slots;
   }
 
+  /// Deletes a save from a specific slot
+  Future<void> deleteSaveSlot(int slotNumber) async {
+    await clearSaveSlot(slotNumber);
+  }
+
   /// Clears a specific save slot
   Future<void> clearSaveSlot(int slotNumber) async {
     if (slotNumber < 0 || slotNumber >= maxSaveSlots) {

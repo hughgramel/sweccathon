@@ -35,6 +35,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   bool _showProvinceDetails = false;
   bool _isMovementMode = false;
   String? _movementOriginId;
+  String? _movementTargetId;
   DateTime? _lastTapTime;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -125,6 +126,11 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     );
     
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_fadeController);
+    
+    // Set initial transformation to center the map
+    transformationController.value = Matrix4.identity()
+      ..scale(2.0)  // Initial zoom level
+      ..translate(-100.0,);  // Center the map
     
     print('Starting to load regions...');
     loadRegions();
@@ -354,21 +360,27 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       setState(() {
         selectedRegion = null;
         _showProvinceDetails = false;
+        _movementTargetId = null;
       });
       return;
     }
 
     final targetProvince = _getProvinceForRegion(regionId);
     
-    final now = DateTime.now();
-    final isDoubleTap = _lastTapTime != null && 
-        now.difference(_lastTapTime!) < const Duration(milliseconds: 300);
-    _lastTapTime = now;
+    setState(() {
+      if (selectedRegion != null && regionId != selectedRegion!.id) {
+        final originProvince = _getProvinceForRegion(selectedRegion!.id);
+        if (originProvince.army > 0 && _canSelectProvince(originProvince) && _canMoveToProvince(targetProvince)) {
+          // If this is a new target, set it as movement target
+          if (_movementTargetId != regionId) {
+            _movementTargetId = regionId;
+            return;
+          }
+        }
+      }
 
-    if (isDoubleTap && selectedRegion != null && regionId != selectedRegion!.id) {
-      // Handle double tap movement
-      final originProvince = _getProvinceForRegion(selectedRegion!.id);
-      if (originProvince.army > 0 && _canSelectProvince(originProvince) && _canMoveToProvince(targetProvince)) {
+      // If we're clicking the target province again, confirm movement
+      if (_movementTargetId == regionId) {
         final originPath = _cachedPaths[selectedRegion!.id];
         final destPath = _cachedPaths[regionId];
         if (originPath != null && destPath != null) {
@@ -378,21 +390,20 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
           );
           _startMovementToProvince(regionId, daysRequired);
         }
+        // Clear selection after movement starts
+        selectedRegion = null;
+        _showProvinceDetails = false;
+        _movementTargetId = null;
+        return;
       }
-    } else {
-      setState(() {
-        if (_isMovementMode) {
-          if (_canMoveToProvince(targetProvince)) {
-            _handleMovement(regionId);
-          }
-        } else {
-          if (_canSelectProvince(targetProvince)) {
-            selectedRegion = Region(id: regionId, path: '');
-            _showProvinceDetails = false;
-          }
-        }
-      });
-    }
+
+      // Normal province selection
+      if (_canSelectProvince(targetProvince)) {
+        selectedRegion = Region(id: regionId, path: '');
+        _showProvinceDetails = false;
+        _movementTargetId = null;
+      }
+    });
   }
 
   void _startMovementToProvince(String destinationId, int daysRequired) {
@@ -487,7 +498,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
             child: InteractiveViewer(
               transformationController: transformationController,
               boundaryMargin: const EdgeInsets.all(8.0),
-              minScale: 0.1,
+              minScale: 1.0,  // Prevent zooming out too far
               maxScale: 20.0,
               constrained: false,
               onInteractionUpdate: (details) {
@@ -513,9 +524,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
             ),
           ),
           
-          
           if (selectedRegion != null && selectedProvince != null && selectedProvince.id.isNotEmpty)
-            
             Positioned(
               left: 0,
               right: 0,
@@ -523,36 +532,30 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!_showProvinceDetails && !_isMovementMode)
-
+                  if (!_showProvinceDetails)
                     Container(
                       transform: Matrix4.translationValues(0, -2, 0),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (!_isMovementMode && !_showProvinceDetails) ...[
-                                Expanded(
-                                  child: Opacity(
-                                    opacity: _getEffectiveArmySize(selectedProvince.id) > 0 && 
-                                            _canSelectProvince(selectedProvince) &&
-                                            selectedProvince.owner == widget.game.playerNationTag ? 1.0 : 0.0,
+                          if (_movementTargetId != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
                                     child: Container(
                                       margin: const EdgeInsets.symmetric(horizontal: 8),
                                       transform: Matrix4.translationValues(0, -2, 0),
                                       decoration: BoxDecoration(
-                                        color: _getMovementInfo(selectedProvince.id) != null 
-                                          ? const Color(0xFFE57373) // Light red for cancel
-                                          : const Color(0xFF6EC53E), // Light green for move
+                                        color: const Color(0xFFE57373), // Light red
                                         borderRadius: BorderRadius.circular(12),
-                                        boxShadow: [
+                                        boxShadow: const [
                                           BoxShadow(
-                                            color: _getMovementInfo(selectedProvince.id) != null
-                                              ? const Color(0xFFC62828) // Darker red for cancel
-                                              : const Color(0xFF59A700), // Darker green for move
-                                            offset: const Offset(0, 4),
+                                            color: Color(0xFFC62828), // Darker red
+                                            offset: Offset(0, 4),
                                             blurRadius: 0,
                                           ),
                                         ],
@@ -562,170 +565,186 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                                         borderRadius: BorderRadius.circular(12),
                                         child: InkWell(
                                           borderRadius: BorderRadius.circular(12),
-                                          onTap: _getEffectiveArmySize(selectedProvince.id) > 0
-                                            ? (_getMovementInfo(selectedProvince.id) != null 
-                                              ? _cancelMovement 
-                                              : _startMovement)
-                                            : null,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  _getMovementInfo(selectedProvince.id) != null
-                                                    ? 'Stop (${_getRemainingDays(selectedProvince.id)}d)'
-                                                    : 'Move',
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
+                                          onTap: () {
+                                            setState(() {
+                                              _movementTargetId = null;
+                                            });
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 12),
+                                            child: Icon(
+                                              Icons.close,
+                                              color: Colors.white,
+                                              size: 24,
                                             ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                                    transform: Matrix4.translationValues(0, -2, 0),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFA726), // Light orange
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0xFFF57C00), // Darker orange
-                                          offset: Offset(0, 4),
-                                          blurRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: InkWell(
+                                  Expanded(
+                                    flex: 3,
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.7),
                                         borderRadius: BorderRadius.circular(12),
-                                        onTap: () {
-                                          // Add recruit functionality
-                                        },
-                                        child: const Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Recruit',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
+                                      ),
+                                      child: Text(
+                                        'Move to ${_getProvinceForRegion(_movementTargetId!).name}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                                      transform: Matrix4.translationValues(0, -2, 0),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF6EC53E), // Light green
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0xFF4A9E1C), // Darker green
+                                            offset: Offset(0, 4),
+                                            blurRadius: 0,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(12),
+                                          onTap: () {
+                                            final originPath = _cachedPaths[selectedRegion!.id];
+                                            final destPath = _cachedPaths[_movementTargetId!];
+                                            if (originPath != null && destPath != null) {
+                                              final daysRequired = calculateMovementDays(
+                                                originPath.getBounds().center,
+                                                destPath.getBounds().center,
+                                              );
+                                              _startMovementToProvince(_movementTargetId!, daysRequired);
+                                            }
+                                            setState(() {
+                                              selectedRegion = null;
+                                              _showProvinceDetails = false;
+                                              _movementTargetId = null;
+                                            });
+                                          },
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 12),
+                                            child: Icon(
+                                              Icons.check,
+                                              color: Colors.white,
+                                              size: 24,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-
-
-
-                                Expanded(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                                    transform: Matrix4.translationValues(0, -2, 0),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF67B9E7), // Light blue
+                                ],
+                              ),
+                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  transform: Matrix4.translationValues(0, -2, 0),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFA726), // Light orange
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0xFFF57C00), // Darker orange
+                                        offset: Offset(0, 4),
+                                        blurRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0xFF4792BA), // Darker blue
-                                          offset: Offset(0, 4),
-                                          blurRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap: () {
-                                          setState(() {
-                                            _showProvinceDetails = true;
-                                          });
-                                        },
-                                        child: const Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Details',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
+                                      onTap: () {
+                                        // Add recruit functionality
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Recruit',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ],
-                              if (_isMovementMode)
-                                Expanded(
-                                  child: Container(
-                                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                                    transform: Matrix4.translationValues(0, -2, 0),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE57373), // Light red
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                                  transform: Matrix4.translationValues(0, -2, 0),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF67B9E7), // Light blue
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0xFF4792BA), // Darker blue
+                                        offset: Offset(0, 4),
+                                        blurRadius: 0,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: InkWell(
                                       borderRadius: BorderRadius.circular(12),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0xFFC62828), // Darker red
-                                          offset: Offset(0, 4),
-                                          blurRadius: 0,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(12),
-                                        onTap: _cancelMovement,
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                'Stop (10d)',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
+                                      onTap: () {
+                                        setState(() {
+                                          _showProvinceDetails = true;
+                                        });
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Details',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
                                 ),
+                              ),
                             ],
                           ),
                         ],
