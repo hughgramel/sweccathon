@@ -733,9 +733,15 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   void _triggerRepaint() {
     print('Forcing map repaint...');
     if (mounted) {
+      var currentSelectedRegion = selectedRegion;
       setState(() {
         // This will force the MapPainter to repaint
         selectedRegion = selectedRegion == null ? Region(id: '', path: '') : null;
+      });
+      print('Map repaint triggered');
+       setState(() {
+        // This will force the MapPainter to repaint
+        selectedRegion = currentSelectedRegion;
       });
     }
   }

@@ -1424,7 +1424,13 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      armies: [],
+      armies: [
+        Army(
+          id: 'sundgau_army_1',
+          nationTag: 'GER',
+          size: 190000,
+        ),
+      ],
       borderingProvinces: ["Franche-Comté","Bern","Zürich","Breisgau","Mulhouse","Lothringen"],
       owner: 'GER',
     ),
