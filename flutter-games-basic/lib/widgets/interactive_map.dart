@@ -9,6 +9,7 @@ import '../models/game_types.dart';
 import 'package:xml/xml.dart';
 import 'package:path_drawing/path_drawing.dart';
 import 'province_details_popup.dart';
+import 'nation_details_popup.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:ui' as ui;
 import 'dart:math';
@@ -33,6 +34,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   Region? selectedRegion;
   bool _isLoading = true;
   bool _showProvinceDetails = false;
+  bool _showNationDetails = false;
+  Nation? _selectedNation;
   bool _isMovementMode = false;
   String? _movementOriginId;
   String? _movementTargetId;
@@ -366,6 +369,10 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     }
 
     final targetProvince = _getProvinceForRegion(regionId);
+    final targetNation = _getNationForProvince(targetProvince);
+    final playerNation = widget.game.nations.firstWhere(
+      (n) => n.nationTag == widget.game.playerNationTag,
+    );
     
     setState(() {
       // If clicking the same province that's already selected, unselect it
@@ -410,6 +417,15 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         selectedRegion = Region(id: regionId, path: '');
         _showProvinceDetails = false;
         _movementTargetId = null;
+      } else if (targetNation != null && targetNation.nationTag != playerNation.nationTag) {
+        // Show nation details popup for foreign provinces
+        setState(() {
+          selectedRegion = Region(id: regionId, path: '');
+          _showProvinceDetails = false;
+          _movementTargetId = null;
+          _showNationDetails = true;
+          _selectedNation = targetNation;
+        });
       }
     });
   }
@@ -540,7 +556,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (!_showProvinceDetails)
+                  if (!_showProvinceDetails && selectedProvince.owner == widget.game.playerNationTag)
                     Container(
                       transform: Matrix4.translationValues(0, -2, 0),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -775,6 +791,123 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                         });
                       },
                     ),
+                  if (_showNationDetails && _selectedNation != null)
+                    NationDetailsPopup(
+                      nation: _selectedNation!,
+                      playerNation: widget.game.nations.firstWhere(
+                        (n) => n.nationTag == widget.game.playerNationTag,
+                      ),
+                      onClose: () {
+                        setState(() {
+                          _showNationDetails = false;
+                          _selectedNation = null;
+                        });
+                      },
+                      onDeclareWar: () {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withOpacity(0.5),
+                          builder: (context) => _ConfirmationDialog(
+                            title: 'Declare War',
+                            message: 'Are you sure you want to declare war on ${_selectedNation!.name}?',
+                            confirmText: 'Declare War',
+                            confirmColor: const Color(0xFFE57373),
+                            confirmShadowColor: const Color(0xFFC62828),
+                            onConfirm: () {
+                              final updatedGame = widget.game.declareWar(
+                                widget.game.playerNationTag,
+                                _selectedNation!.nationTag,
+                              );
+                              widget.onGameUpdate(updatedGame);
+                              Navigator.of(context).pop();
+                              setState(() {
+                                _showNationDetails = false;
+                                _selectedNation = null;
+                              });
+                            },
+                            onCancel: () => Navigator.of(context).pop(),
+                          ),
+                        );
+                      },
+                      onMakePeace: () {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withOpacity(0.5),
+                          builder: (context) => _ConfirmationDialog(
+                            title: 'Make Peace',
+                            message: 'Are you sure you want to make peace with ${_selectedNation!.name}?',
+                            confirmText: 'Make Peace',
+                            confirmColor: const Color(0xFF6EC53E),
+                            confirmShadowColor: const Color(0xFF4A9E1C),
+                            onConfirm: () {
+                              final updatedGame = widget.game.makePeace(
+                                widget.game.playerNationTag,
+                                _selectedNation!.nationTag,
+                              );
+                              widget.onGameUpdate(updatedGame);
+                              Navigator.of(context).pop();
+                              setState(() {
+                                _showNationDetails = false;
+                                _selectedNation = null;
+                              });
+                            },
+                            onCancel: () => Navigator.of(context).pop(),
+                          ),
+                        );
+                      },
+                      onFormAlliance: () {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withOpacity(0.5),
+                          builder: (context) => _ConfirmationDialog(
+                            title: 'Form Alliance',
+                            message: 'Are you sure you want to form an alliance with ${_selectedNation!.name}?',
+                            confirmText: 'Form Alliance',
+                            confirmColor: const Color(0xFF67B9E7),
+                            confirmShadowColor: const Color(0xFF4792BA),
+                            onConfirm: () {
+                              final updatedGame = widget.game.formAlliance(
+                                widget.game.playerNationTag,
+                                _selectedNation!.nationTag,
+                              );
+                              widget.onGameUpdate(updatedGame);
+                              Navigator.of(context).pop();
+                              setState(() {
+                                _showNationDetails = false;
+                                _selectedNation = null;
+                              });
+                            },
+                            onCancel: () => Navigator.of(context).pop(),
+                          ),
+                        );
+                      },
+                      onBreakAlliance: () {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withOpacity(0.5),
+                          builder: (context) => _ConfirmationDialog(
+                            title: 'Break Alliance',
+                            message: 'Are you sure you want to break your alliance with ${_selectedNation!.name}?',
+                            confirmText: 'Break Alliance',
+                            confirmColor: const Color(0xFFE57373),
+                            confirmShadowColor: const Color(0xFFC62828),
+                            onConfirm: () {
+                              final updatedGame = widget.game.breakAlliance(
+                                widget.game.playerNationTag,
+                                _selectedNation!.nationTag,
+                              );
+                              widget.onGameUpdate(updatedGame);
+                              Navigator.of(context).pop();
+                              setState(() {
+                                _showNationDetails = false;
+                                _selectedNation = null;
+                              });
+                            },
+                            onCancel: () => Navigator.of(context).pop(),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
@@ -962,7 +1095,7 @@ class MapPainter extends CustomPainter {
                 color: Colors.white,
                 fontSize: fontSize,
                 fontWeight: FontWeight.w600,
-                letterSpacing: -fontSize * 0.05,
+                letterSpacing: -fontSize * 0.14, // GAP HERE
               ),
             );
             
@@ -1218,8 +1351,8 @@ class RegionBorderPainter extends CustomPainter {
 
   RegionBorderPainter({super.repaint, required this.path}) {
     borderPaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 0.02
+      ..color = const Color.fromARGB(255, 28, 28, 28)
+      ..strokeWidth = 0.01
       ..style = PaintingStyle.stroke;
   }
 
@@ -1232,5 +1365,117 @@ class RegionBorderPainter extends CustomPainter {
   @override
   bool shouldRepaint(RegionBorderPainter oldDelegate) {
     return oldDelegate.path != path;
+  }
+}
+
+class _ConfirmationDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final String confirmText;
+  final Color confirmColor;
+  final Color confirmShadowColor;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  const _ConfirmationDialog({
+    required this.title,
+    required this.message,
+    required this.confirmText,
+    required this.confirmColor,
+    required this.confirmShadowColor,
+    required this.onConfirm,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              offset: const Offset(0, 4),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onCancel,
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  transform: Matrix4.translationValues(0, -2, 0),
+                  decoration: BoxDecoration(
+                    color: confirmColor,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: confirmShadowColor,
+                        offset: const Offset(0, 4),
+                        blurRadius: 0,
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: onConfirm,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                        child: Text(
+                          confirmText,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

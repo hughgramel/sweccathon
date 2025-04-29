@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/game_types.dart';
-import '../data/world_1836.dart';
+import '../data/world_1914.dart';
 
 /// Service responsible for saving and loading game state
 class GamePersistenceService {
@@ -38,7 +38,7 @@ class GamePersistenceService {
 
   /// Loads the current game state
   /// 
-  /// Returns the default 1836 scenario if no saved game exists
+  /// Returns the default 1914 scenario if no saved game exists
   Future<Game> loadCurrentGame() async {
     final prefs = await SharedPreferences.getInstance();
     final gameJson = prefs.getString(_currentGameKey);
@@ -49,11 +49,11 @@ class GamePersistenceService {
         return _gameFromJson(decodedJson);
       } catch (e) {
         print('Error loading saved game: $e');
-        return world1836; // Fallback to default scenario
+        return world1914; // Fallback to default scenario
       }
     }
     
-    return world1836; // Return default scenario if no save exists
+    return world1914; // Return default scenario if no save exists
   }
 
   /// Lists all saved games
@@ -115,6 +115,7 @@ class GamePersistenceService {
       'buildQueue': nation.buildQueue?.map((build) => _queuedBuildToJson(build)).toList(),
       'isAI': nation.isAI,
       'movements': nation.movements.map((movement) => _movementToJson(movement)).toList(),
+      'atWarWith': nation.atWarWith,
     };
   }
 
@@ -205,6 +206,7 @@ class GamePersistenceService {
           ? List<Movement>.from(
               (json['movements'] as List).map((x) => _movementFromJson(x as Map<String, dynamic>)))
           : [],
+      atWarWith: List<String>.from(json['atWarWith'] as List? ?? []),
     );
   }
 

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/game_types.dart';
-import '../data/world_1836.dart';
+import '../data/world_1914.dart';
 
-/// Screen that displays the list of playable nations in the 1836 scenario
-class CountryList1836Screen extends StatelessWidget {
-  const CountryList1836Screen({super.key});
+/// Screen that displays the list of playable nations in the 1914 scenario
+class CountryList1914Screen extends StatelessWidget {
+  const CountryList1914Screen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +31,9 @@ class CountryList1836Screen extends StatelessWidget {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              itemCount: world1836.nations.length,
+              itemCount: world1914.nations.length,
               itemBuilder: (context, index) {
-                final nation = world1836.nations[index];
+                final nation = world1914.nations[index];
                 return _NationCard(
                   nation: nation,
                   onTap: () => context.go('/game-view/${nation.nationTag}'),
@@ -135,12 +135,12 @@ class _NationCard extends StatelessWidget {
               children: [
                 _StatItem(
                   icon: Icons.people_outline,
-                  value: '${(nation.getTotalPopulation(world1836.provinces) / 1000000).toStringAsFixed(1)}M',
+                  value: '${(nation.getTotalPopulation(world1914.provinces) / 1000000).toStringAsFixed(1)}M',
                   label: 'Population',
                 ),
                 _StatItem(
                   icon: Icons.factory_outlined,
-                  value: nation.getTotalIndustry(world1836.provinces).toString(),
+                  value: nation.getTotalIndustry(world1914.provinces).toString(),
                   label: 'Industry',
                 ),
                 _StatItem(
@@ -150,7 +150,7 @@ class _NationCard extends StatelessWidget {
                 ),
                 _StatItem(
                   icon: Icons.military_tech_outlined,
-                  value: nation.getTotalArmy(world1836.provinces).toString(),
+                  value: nation.getTotalArmy(world1914.provinces).toString(),
                   label: 'Army',
                 ),
               ],

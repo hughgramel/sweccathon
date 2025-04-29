@@ -2,7 +2,7 @@ import 'package:clashofnations/widgets/interactive_map.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../models/game_types.dart';
-import '../data/world_1836.dart';
+import '../data/world_1914.dart';
 // import '../widgets/interactive_map.dart';
 import '../widgets/resource_bar.dart';
 import '../services/game_persistence_service.dart';
@@ -73,7 +73,7 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   }
 
   String _formatDate(int days) {
-    final startDate = DateTime(1836, 1, 1);
+    final startDate = DateTime(1914, 1, 1);
     final date = startDate.add(Duration(days: days));
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
@@ -238,16 +238,16 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
   }
 
   void _createNewGame() {
-    final nation = world1836.nations.firstWhere((n) => n.nationTag == widget.nationTag);
+    final nation = world1914.nations.firstWhere((n) => n.nationTag == widget.nationTag);
     setState(() {
       currentGame = Game(
         id: 'game_${DateTime.now().millisecondsSinceEpoch}',
         gameName: 'New Game',
-        date: 0,  // Start at day 0 (1836-01-01)
+        date: 0,  // Start at day 0 (1914-01-01)
         mapName: 'world_provinces',
         playerNationTag: widget.nationTag,
-        nations: [nation, ...world1836.nations.where((n) => n.nationTag != widget.nationTag)],
-        provinces: world1836.provinces,
+        nations: [nation, ...world1914.nations.where((n) => n.nationTag != widget.nationTag)],
+        provinces: world1914.provinces,
       );
     });
   }

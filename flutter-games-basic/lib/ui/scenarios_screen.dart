@@ -19,9 +19,9 @@ class ScenariosScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 1836 Scenario Button
+          // 1914 Scenario Button
           InkWell(
-            onTap: () => context.go('/country-list-1836'),
+            onTap: () => context.go('/country-list-1914'),
             child: Container(
               height: 240,
               margin: const EdgeInsets.only(bottom: 16),
@@ -71,7 +71,9 @@ class ScenariosScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: const [
+                        colors: [
+                          Colors.black.withOpacity(0.3),
+                          Colors.black.withOpacity(0.7),
                         ],
                       ),
                     ),
@@ -89,7 +91,7 @@ class ScenariosScreen extends StatelessWidget {
                           children: [
                             // Year
                             Text(
-                              '1836',
+                              '1914',
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.bold,

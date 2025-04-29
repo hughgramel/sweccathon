@@ -54,39 +54,54 @@ class GameSavesScreen extends StatelessWidget {
                 );
               }
               
-              return Card(
+              return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.save),
-                  ),
-                  title: Text(
-                    game.gameName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Date: ${game.formattedDate}'),
-                      Text('Nation: ${game.playerNation.name}'),
-                      Text('Provinces: ${game.playerNation.nationProvinces.length}'),
-                      Text('Armies: ${game.playerNation.getTotalArmy(game.provinces)}'),
-                      if (game.playerNation.movements.isNotEmpty)
-                        Text('Active Movements: ${game.playerNation.movements.length}'),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      palette.backgroundLevelSelection,
+                      palette.backgroundLevelSelection.withOpacity(0.8),
                     ],
                   ),
-                  isThreeLine: true,
-                  trailing: const Icon(Icons.play_arrow),
-                  onTap: () {
-                    context.go('/game-view', extra: {
-                      'game': game,
-                      'saveSlot': index,
-                      'nationTag': game.playerNationTag,
-                    });
-                  },
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Card(
+                  color: Colors.transparent,
+                  elevation: 0,
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.save),
+                    ),
+                    title: Text(
+                      game.gameName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Date: ${game.formattedDate}'),
+                        Text('Nation: ${game.playerNation.name}'),
+                        Text('Provinces: ${game.playerNation.nationProvinces.length}'),
+                        Text('Armies: ${game.playerNation.getTotalArmy(game.provinces)}'),
+                        if (game.playerNation.movements.isNotEmpty)
+                          Text('Active Movements: ${game.playerNation.movements.length}'),
+                      ],
+                    ),
+                    isThreeLine: true,
+                    trailing: const Icon(Icons.play_arrow),
+                    onTap: () {
+                      context.go('/game-view', extra: {
+                        'game': game,
+                        'saveSlot': index,
+                        'nationTag': game.playerNationTag,
+                      });
+                    },
+                  ),
                 ),
               );
             },

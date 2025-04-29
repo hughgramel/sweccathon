@@ -131,6 +131,7 @@ class Nation {
   final List<QueuedBuild>? buildQueue;
   final bool isAI;
   final List<Movement> movements;
+  final List<String> atWarWith;  // List of nation tags this nation is at war with
 
   Nation({
     required this.nationTag,
@@ -147,6 +148,7 @@ class Nation {
     this.buildQueue,
     required this.isAI,
     this.movements = const [],
+    this.atWarWith = const [],  // Initialize empty list
   });
 
   Nation copyWith({
@@ -164,6 +166,7 @@ class Nation {
     List<QueuedBuild>? buildQueue,
     bool? isAI,
     List<Movement>? movements,
+    List<String>? atWarWith,  // Add atWarWith to copyWith
   }) {
     return Nation(
       nationTag: nationTag ?? this.nationTag,
@@ -180,31 +183,52 @@ class Nation {
       buildQueue: buildQueue ?? this.buildQueue,
       isAI: isAI ?? this.isAI,
       movements: movements ?? this.movements,
+      atWarWith: atWarWith ?? this.atWarWith,  // Add atWarWith to copyWith
     );
   }
 
   // Calculate total resources - now takes provinces as parameter
-  int getTotalPopulation(List<Province> allProvinces) => 
-    nationProvinces.fold(0, (sum, id) => 
-      sum + (allProvinces.firstWhere((p) => p.id == id).population));
+  int getTotalPopulation(List<Province> allProvinces) {
+    print('Calculating total population for ${nationTag}');
+    print('Nation provinces: ${nationProvinces.join(", ")}');
+    print('All provinces count: ${allProvinces.length}');
+    final total = nationProvinces.fold(0, (sum, id) {
+      final province = allProvinces.where((p) => p.id == id).firstOrNull;
+      if (province == null) {
+        print('Warning: Province $id not found for nation $nationTag');
+      }
+      return sum + (province?.population ?? 0);
+    });
+    print('Total population for $nationTag: $total');
+    return total;
+  }
   
-  int getTotalGoldIncome(List<Province> allProvinces) => 
-    nationProvinces.fold(0, (sum, id) => 
-      sum + (allProvinces.firstWhere((p) => p.id == id).goldIncome));
+  int getTotalGoldIncome(List<Province> allProvinces) {
+    print('Calculating total gold income for ${nationTag}');
+    return nationProvinces.fold(0, (sum, id) {
+      final province = allProvinces.where((p) => p.id == id).firstOrNull;
+      if (province == null) {
+        print('Warning: Province $id not found for nation $nationTag');
+      }
+      return sum + (province?.goldIncome ?? 0);
+    });
+  }
   
   int getTotalIndustry(List<Province> allProvinces) => 
     nationProvinces.fold(0, (sum, id) => 
-      sum + (allProvinces.firstWhere((p) => p.id == id).industry));
+      sum + (allProvinces.where((p) => p.id == id).firstOrNull?.industry ?? 0));
   
   int getTotalArmy(List<Province> allProvinces) => 
     nationProvinces.fold(0, (sum, id) => 
-      sum + (allProvinces.firstWhere((p) => p.id == id).army));
+      sum + (allProvinces.where((p) => p.id == id).firstOrNull?.army ?? 0));
   
   Map<ResourceType, int> getResourceCounts(List<Province> allProvinces) {
     final counts = <ResourceType, int>{};
     for (final provinceId in nationProvinces) {
-      final province = allProvinces.firstWhere((p) => p.id == provinceId);
-      counts[province.resourceType] = (counts[province.resourceType] ?? 0) + 1;
+      final province = allProvinces.where((p) => p.id == provinceId).firstOrNull;
+      if (province != null) {
+        counts[province.resourceType] = (counts[province.resourceType] ?? 0) + 1;
+      }
     }
     return counts;
   }
@@ -233,7 +257,7 @@ class Game {
 
   // Format the date as YYYY-MM-DD
   String get formattedDate {
-    final startDate = DateTime(1836, 1, 1);
+    final startDate = DateTime(1914, 1, 1);
     final currentDate = startDate.add(Duration(days: date));
     return '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
   }
@@ -263,6 +287,7 @@ class Game {
             buildQueue: nation.buildQueue,
             isAI: nation.isAI,
             movements: nation.movements,
+            atWarWith: nation.atWarWith,
           );
         }
         return nation;
@@ -319,6 +344,102 @@ class Game {
       playerNationTag: playerNationTag,
       nations: updatedNations,
       provinces: updatedProvinces,
+    );
+  }
+
+  /// Declare war between two nations
+  Game declareWar(String attackerTag, String defenderTag) {
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations.map((nation) {
+        if (nation.nationTag == attackerTag) {
+          return nation.copyWith(
+            atWarWith: [...nation.atWarWith, defenderTag],
+          );
+        } else if (nation.nationTag == defenderTag) {
+          return nation.copyWith(
+            atWarWith: [...nation.atWarWith, attackerTag],
+          );
+        }
+        return nation;
+      }).toList(),
+      provinces: provinces,
+    );
+  }
+
+  /// Make peace between two nations
+  Game makePeace(String nation1Tag, String nation2Tag) {
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations.map((nation) {
+        if (nation.nationTag == nation1Tag) {
+          return nation.copyWith(
+            atWarWith: nation.atWarWith.where((tag) => tag != nation2Tag).toList(),
+          );
+        } else if (nation.nationTag == nation2Tag) {
+          return nation.copyWith(
+            atWarWith: nation.atWarWith.where((tag) => tag != nation1Tag).toList(),
+          );
+        }
+        return nation;
+      }).toList(),
+      provinces: provinces,
+    );
+  }
+
+  /// Form an alliance between two nations
+  Game formAlliance(String nation1Tag, String nation2Tag) {
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations.map((nation) {
+        if (nation.nationTag == nation1Tag) {
+          return nation.copyWith(
+            allies: [...nation.allies, nation2Tag],
+          );
+        } else if (nation.nationTag == nation2Tag) {
+          return nation.copyWith(
+            allies: [...nation.allies, nation1Tag],
+          );
+        }
+        return nation;
+      }).toList(),
+      provinces: provinces,
+    );
+  }
+
+  /// Break an alliance between two nations
+  Game breakAlliance(String nation1Tag, String nation2Tag) {
+    return Game(
+      id: id,
+      gameName: gameName,
+      date: date,
+      mapName: mapName,
+      playerNationTag: playerNationTag,
+      nations: nations.map((nation) {
+        if (nation.nationTag == nation1Tag) {
+          return nation.copyWith(
+            allies: nation.allies.where((tag) => tag != nation2Tag).toList(),
+          );
+        } else if (nation.nationTag == nation2Tag) {
+          return nation.copyWith(
+            allies: nation.allies.where((tag) => tag != nation1Tag).toList(),
+          );
+        }
+        return nation;
+      }).toList(),
+      provinces: provinces,
     );
   }
 } 
