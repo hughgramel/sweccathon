@@ -443,6 +443,27 @@ class Game {
             );
           }
         }
+        
+        // TESTING: Add 30,000 French troops to Verdun, Lothringen, and Franche-Comté on the first day of each month
+        if (province.owner == 'FRA' && 
+            (province.id == 'Verdun' || 
+             province.id == 'Lothringen' || 
+             province.id == 'Franche-Comté')) {
+          
+          // Create a new army to add for testing
+          final newTestArmy = Army(
+            id: 'monthly_reinforcement_${DateTime.now().millisecondsSinceEpoch}_${province.id}',
+            nationTag: 'FRA',
+            size: 30000,
+          );
+          
+          print("TESTING: Adding 30,000 French troops to ${province.name} for monthly reinforcement");
+          
+          // Add the new army to this province's existing armies
+          return province.copyWith(
+            armies: [...province.armies, newTestArmy],
+          );
+        }
       }
       return province;
     }).toList();

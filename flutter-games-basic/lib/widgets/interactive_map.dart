@@ -738,10 +738,9 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         // This will force the MapPainter to repaint
         selectedRegion = selectedRegion == null ? Region(id: '', path: '') : null;
       });
-      print('Map repaint triggered');
-       setState(() {
+      setState(() {
         // This will force the MapPainter to repaint
-        selectedRegion = currentSelectedRegion;
+        rerenderVariable++;
       });
     }
   }
