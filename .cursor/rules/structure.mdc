@@ -1,0 +1,218 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Flutter Games Basic - Strategy Game Framework
+
+[*] Project Structure
+    flutter-games-basic/
+    ├── lib/
+    │   ├── models/
+    │   │   └── game_types.dart       # Core game data structures and types
+    │   ├── services/
+    │   │   └── game_persistence_service.dart  # Game state persistence
+    │   ├── widgets/
+    │   │   ├── interactive_map.dart  # SVG-based interactive world map
+    │   │   ├── province_details_popup.dart
+    │   │   ├── nation_details_popup.dart
+    │   │   └── resource_bar.dart
+    │   ├── ui/
+    │   │   └── game_view_screen.dart # Main game screen
+    │   └── data/
+    │       └── world_1914.dart       # Initial game scenario data
+    ├── assets/
+    │   ├── svg/
+    │   │   └── world_states_map.svg  # World map SVG
+    │   └── flags/                    # Nation flag images
+    │       ├── fra.png
+    │       ├── ger.png
+    │       └── ...
+    └── pubspec.yaml
+
+[*] Framework & Dependencies
+    @framework: Flutter
+    @state_management: setState
+    @storage: SharedPreferences
+    @graphics: SVG + CustomPainter
+    @navigation: go_router
+
+[*] Core Types
+    @game {
+        id: String
+        gameName: String
+        date: int
+        mapName: String
+        playerNationTag: String
+        nations: List<Nation>
+        provinces: List<Province>
+    }
+
+    @nation {
+        nationTag: String
+        name: String
+        color: String
+        hexColor: String
+        nationProvinces: List<String>
+        allies: List<String>
+        borderProvinces: List<String>
+        gold: double
+        researchPoints: double
+        currentResearchId: String?
+        currentResearchProgress: double
+        buildQueue: List<QueuedBuild>?
+        isAI: bool
+        movements: List<Movement>
+        atWarWith: List<String>
+        armyReserve: double
+    }
+
+    @province {
+        id: String
+        name: String
+        path: String
+        population: int
+        goldIncome: int
+        industry: int
+        buildings: List<Building>
+        resourceType: ResourceType
+        army: int
+        owner: String
+    }
+
+    @movement {
+        originProvinceId: String
+        destinationProvinceId: String
+        daysLeft: int
+        armySize: int
+    }
+
+[*] Interactive Map System
+    @file: interactive_map.dart
+    @features {
+        - SVG map rendering
+        - Path caching
+        - Viewport culling
+        - Touch interaction
+        - Army movement visualization
+        - Province information overlays
+    }
+
+    @optimizations {
+        - Path caching
+        - Color caching
+        - Text painter caching
+        - Viewport culling
+        - Deferred text rendering
+        - Movement arrow optimization
+    }
+
+[*] State Management
+    @direct_actions {
+        - Province selection
+        - Army movement
+        - Diplomatic actions
+    }
+
+    @time_based_updates {
+        - Monthly resource gains
+        - Population growth
+        - Army movement progression
+    }
+
+[*] Persistence
+    @storage: SharedPreferences
+    @save_slots: 5
+    @serialization: JSON
+
+    @save_structure {
+        id: String
+        gameName: String
+        date: int
+        mapName: String
+        playerNationTag: String
+        nations: Array
+        provinces: Array
+    }
+
+[*] Game Loop
+    @time_progression {
+        1. Day increment
+        2. Movement updates
+        3. Monthly calculations
+        4. Province updates
+        5. UI refresh
+    }
+
+    @movement_processing {
+        1. Timer updates
+        2. Position updates
+        3. Completion handling
+        4. Army updates
+    }
+
+[*] Resource System
+    @types {
+        - gold
+        - coal
+        - iron
+        - food
+        - none
+    }
+
+    @building {
+        id: String
+        name: String
+        industryBonus: int
+        goldBonus: int
+        requiredResource: ResourceType?
+    }
+
+[*] Diplomatic System
+    @actions {
+        - Declare War
+        - Make Peace
+        - Form Alliance
+        - Break Alliance
+    }
+
+    @relationships {
+        - Allies
+        - Enemies
+        - Neutral
+    }
+
+[*] Usage Rules
+    @map_interaction {
+        1. Province selection
+        2. Movement targeting
+        3. Speed control
+        4. Detail access
+    }
+
+    @army_movement {
+        1. Source selection
+        2. Target selection
+        3. Movement confirmation
+        4. Progress monitoring
+    }
+
+    @save_load {
+        1. Menu access
+        2. Slot selection
+        3. Overwrite confirmation
+        4. Error handling
+    }
+
+    @diplomacy {
+        1. Nation selection
+        2. Action selection
+        3. Confirmation
+        4. Relationship monitoring
+    }
+
+[*] File Dependencies
+    @interactive_map.dart -> game_types.dart
+    @game_view_screen.dart -> interactive_map.dart, game_types.dart
+    @game_persistence_service.dart -> game_types.dart
+    @game_types.dart -> None 

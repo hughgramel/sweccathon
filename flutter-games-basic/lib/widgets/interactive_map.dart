@@ -33,6 +33,7 @@ class InteractiveMap extends StatefulWidget {
 class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProviderStateMixin {
   List<Region> regions = [];
   Region? selectedRegion;
+  num rerenderVariable = 0;
   bool _isLoading = true;
   bool _showProvinceDetails = false;
   bool _showNationDetails = false;
@@ -91,6 +92,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   }
 
   Province _getProvinceForRegion(String regionId) {
+    print('=== Getting Province for Region ===');
     return widget.game.provinces.firstWhere(
       (p) => p.id == regionId,
       orElse: () => Province(
@@ -133,12 +135,10 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
 
   @override
   void initState() {
-    print('=== InteractiveMap initState ===');
     super.initState();
-    print('Starting to load regions...');
     loadRegions();
     _loadFlagImages();
-    print('=== InteractiveMap initState Complete ===');
+   
     
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -198,14 +198,11 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   }
 
   Future<void> loadRegions() async {
-    print('loadRegions - beginning SVG parsing');
     const path = 'assets/svg/world_states_map.svg';
     final content = await rootBundle.loadString(path);
-    print('SVG file loaded successfully');
     
     final document = XmlDocument.parse(content);
     final paths = document.findAllElements('path');
-    print('Found ${paths.length} paths in SVG');
     
     final List<Region> loadedRegions = [];
     
@@ -223,11 +220,9 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       _getProvinceColor(partId);
     }
     
-    print('Successfully parsed ${loadedRegions.length} regions');
     setState(() {
       regions = loadedRegions;
       _isLoading = false;
-      print('State updated with ${regions.length} regions');
     });
     _fadeController.forward();
   }
@@ -388,10 +383,9 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   }
 
   void _handleRegionTap(String? regionId) {
-    print('=== Province Selection ===');
-    print('Selected region ID: $regionId');
-    
+    print('=== Handling Region Tap ===');
     if (regionId == null) {
+
       print('Clearing selection');
       setState(() {
         selectedRegion = null;
@@ -402,12 +396,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     }
 
     final targetProvince = _getProvinceForRegion(regionId);
-    print('Found province: ${targetProvince.id} (${targetProvince.name})');
-    print('Province army: ${targetProvince.army}');
-    print('Province owner: ${targetProvince.owner}');
     
     final targetNation = _getNationForProvince(targetProvince);
-    print('Found nation: ${targetNation?.nationTag}');
     
     final playerNation = widget.game.nations.firstWhere(
       (n) => n.nationTag == widget.game.playerNationTag,
@@ -580,6 +570,16 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     }
   }
 
+  // Add this new function
+  void _triggerRepaint() {
+    if (mounted) {
+      setState(() {
+        // This will force the MapPainter to repaint
+        selectedRegion = selectedRegion == null ? Region(id: '', path: '') : null;
+      });
+    }
+  }
+
   @override
   void didUpdateWidget(InteractiveMap oldWidget) {
     print('=== InteractiveMap didUpdateWidget ===');
@@ -594,32 +594,77 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       
       // Track total movements
       int totalMovements = 0;
-      int completingMovements = 0;
+      int completedMovements = 0;
+      String? completedMovementDest = null;
       
-      for (final nation in widget.game.nations) {
+      // First, check for movements that were about to complete in the previous state
+      for (final nation in oldWidget.game.nations) {
         if (nation.movements.isEmpty) continue;
         
         print('\nNation: ${nation.nationTag}');
         for (final movement in nation.movements) {
-          totalMovements++;
+          // Check if movement was about to complete (daysLeft = 1)
+          final wasAboutToComplete = movement.daysLeft == 1;
+          if (wasAboutToComplete) {
+            // Check if this movement is no longer in the current state
+            final currentNation = widget.game.nations.firstWhere(
+              (n) => n.nationTag == nation.nationTag,
+              orElse: () => Nation(
+                nationTag: '',
+                name: '',
+                color: '',
+                hexColor: '',
+                nationProvinces: [],
+                allies: [],
+                borderProvinces: [],
+                gold: 0,
+                researchPoints: 0,
+                currentResearchId: null,
+                currentResearchProgress: 0,
+                buildQueue: null,
+                isAI: false,
+                armyReserve: 0,
+              ),
+            );
+            
+            final movementStillExists = currentNation.movements.any(
+              (m) => m.originProvinceId == movement.originProvinceId && 
+                     m.destinationProvinceId == movement.destinationProvinceId
+            );
+            
+            if (!movementStillExists) {
+              completedMovements++;
+              completedMovementDest = movement.destinationProvinceId;
+            }
+          }
           
-          // Check if movement will complete this tick
-          final willComplete = movement.daysLeft == 1;
-          if (willComplete) completingMovements++;
-          
-          print('Movement:');
+          print('Previous Movement:');
           print('  From: ${movement.originProvinceId}');
           print('  To: ${movement.destinationProvinceId}');
           print('  Army size: ${movement.armySize}');
           print('  Days left: ${movement.daysLeft}');
-          print('  Status: ${willComplete ? 'Completing this turn' : 'In progress'}');
+          print('  Status: ${wasAboutToComplete ? 'Was about to complete' : 'In progress'}');
         }
+      }
+      
+      // Count current active movements
+      for (final nation in widget.game.nations) {
+        totalMovements += nation.movements.length;
       }
       
       print('\nMovement Summary:');
       print('Total active movements: $totalMovements');
-      print('Movements completing this turn: $completingMovements');
+      print('Movements just completed: $completedMovements');
       print('=== End Movement Status ===\n');
+
+      // If we have a movement that just completed, trigger a repaint
+      if (completedMovementDest != null) {
+        print('\n=== Handling Completed Movement ===');
+        print('Triggering repaint for completed movement');
+        // handleRegionTap(completedMovementDest);
+        _triggerRepaint();
+        print('=== Completed Movement Handled ===\n');
+      }
     }
     
     print('=== InteractiveMap didUpdateWidget Complete ===');
@@ -627,9 +672,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    print('=== InteractiveMap build ===');
     if (_isLoading) {
-      print('Map is still loading');
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -648,26 +691,28 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       );
     }
 
-    print('Building map with ${regions.length} regions');
-    print('Selected region: ${selectedRegion?.id}');
-    print('Show province details: $_showProvinceDetails');
-    print('Show nation details: $_showNationDetails');
-    print('Movement mode: $_isMovementMode');
-    print('Movement origin: $_movementOriginId');
-    print('Movement target: $_movementTargetId');
-
     final selectedProvince = selectedRegion != null ? _getProvinceForRegion(selectedRegion!.id) : null;
     final selectedNation = selectedProvince != null && selectedProvince.id.isNotEmpty 
         ? _getNationForProvince(selectedProvince) 
         : null;
 
-    print('Selected province: ${selectedProvince?.id}');
-    print('Selected nation: ${selectedNation?.nationTag}');
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Stack(
         children: [
+          // Invisible rerender helper
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Opacity(
+              opacity: 0,
+              child: Text(
+                rerenderVariable.toString(),
+                style: const TextStyle(fontSize: 0.1),
+              ),
+            ),
+          ),
           Center(
             child: InteractiveViewer(
               key: _interactiveViewerKey,

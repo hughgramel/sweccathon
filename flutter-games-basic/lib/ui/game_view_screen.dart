@@ -139,37 +139,6 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
           });
           _fadeController.forward();
           // Print game state
-          print('\n=== Game State ===');
-          print('Game ID: ${savedGame.id}');
-          print('Game Name: ${savedGame.gameName}');
-          print('Date: ${savedGame.date}');
-          print('Map: ${savedGame.mapName}');
-          print('Player Nation Tag: ${savedGame.playerNationTag}');
-          print('\nNations:');
-          for (final nation in savedGame.nations) {
-            print('\n--- ${nation.name} (${nation.nationTag}) ---');
-            print('Color: ${nation.color}');
-            print('Gold: ${nation.gold}');
-            print('Research Points: ${nation.researchPoints}');
-            print('Current Research: ${nation.currentResearchId} (${nation.currentResearchProgress}%)');
-            print('Is AI: ${nation.isAI}');
-            print('Total Population: ${nation.getTotalPopulation(savedGame.provinces)}');
-            print('Total Gold Income: ${nation.getTotalGoldIncome(savedGame.provinces)}');
-            print('Total Industry: ${nation.getTotalIndustry(savedGame.provinces)}');
-            print('Total Army: ${nation.getTotalArmy(savedGame.provinces)}');
-            print('Resources: ${nation.getResourceCounts(savedGame.provinces)}');
-            print('\nProvinces:');
-            for (final provinceId in nation.nationProvinces) {
-              final province = savedGame.provinces.firstWhere((p) => p.id == provinceId);
-              print('  - ${province.name}');
-              print('    Population: ${province.population}');
-              print('    Gold Income: ${province.goldIncome}');
-              print('    Industry: ${province.industry}');
-              print('    Army: ${province.army}');
-              print('    Resource: ${province.resourceType}');
-            }
-          }
-          print('\n=================\n');
           return;
         }
       }
@@ -179,7 +148,6 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
       });
       _fadeController.forward();
     } catch (e) {
-      print('Error loading game: $e');
       setState(() {
         _isLoading = false;
       });
@@ -232,7 +200,6 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 leading: const Icon(Icons.home),
                 title: const Text('Return Home'),
                 onTap: () {
-                  print('Return Home');
                   // Close modal using modal's context
                   Navigator.pop(modalContext);
                   // Navigate using GoRouter
@@ -327,8 +294,6 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
-    print('GameViewScreen build');
-    
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,

@@ -195,9 +195,6 @@ class Nation {
 
   // Calculate total resources - now takes provinces as parameter
   int getTotalPopulation(List<Province> allProvinces) {
-    print('Calculating total population for ${nationTag}');
-    print('Nation provinces: ${nationProvinces.join(", ")}');
-    print('All provinces count: ${allProvinces.length}');
     final total = nationProvinces.fold(0, (sum, id) {
       final province = allProvinces.where((p) => p.id == id).firstOrNull;
       if (province == null) {
@@ -205,12 +202,10 @@ class Nation {
       }
       return sum + (province?.population ?? 0);
     });
-    print('Total population for $nationTag: $total');
     return total;
   }
   
   int getTotalGoldIncome(List<Province> allProvinces) {
-    print('Calculating total gold income for ${nationTag}');
     return nationProvinces.fold(0, (sum, id) {
       final province = allProvinces.where((p) => p.id == id).firstOrNull;
       if (province == null) {
