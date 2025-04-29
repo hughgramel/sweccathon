@@ -38,6 +38,30 @@ class Building {
   });
 }
 
+class Army {
+  final String id;
+  final String nationTag;
+  final int size;
+
+  const Army({
+    required this.id,
+    required this.nationTag,
+    required this.size,
+  });
+
+  Army copyWith({
+    String? id,
+    String? nationTag,
+    int? size,
+  }) {
+    return Army(
+      id: id ?? this.id,
+      nationTag: nationTag ?? this.nationTag,
+      size: size ?? this.size,
+    );
+  }
+}
+
 class Province {
   final String id;
   final String name;
@@ -47,7 +71,7 @@ class Province {
   final int industry;
   final List<Building> buildings;
   final ResourceType resourceType;
-  final int army;  // Standing army in this province
+  final List<Army> armies;  // Changed from int army to List<Army>
   final String owner;  // Nation tag that owns this province
   final List<String> borderingProvinces;  // IDs of provinces that border this one
 
@@ -60,10 +84,17 @@ class Province {
     required this.industry,
     required this.buildings,
     required this.resourceType,
-    required this.army,
+    required this.armies,  // Updated parameter
     required this.owner,
     this.borderingProvinces = const [],  // Default to empty list
   });
+
+  // Helper method to get total army size
+  int get totalArmySize => armies.fold(0, (sum, army) => sum + army.size);
+
+  // Helper method to get armies by nation
+  List<Army> getArmiesByNation(String nationTag) => 
+    armies.where((a) => a.nationTag == nationTag).toList();
 
   Province copyWith({
     String? id,
@@ -74,7 +105,7 @@ class Province {
     int? industry,
     List<Building>? buildings,
     ResourceType? resourceType,
-    int? army,
+    List<Army>? armies,  // Updated parameter
     String? owner,
     List<String>? borderingProvinces,
   }) {
@@ -87,7 +118,7 @@ class Province {
       industry: industry ?? this.industry,
       buildings: buildings ?? this.buildings,
       resourceType: resourceType ?? this.resourceType,
-      army: army ?? this.army,
+      armies: armies ?? this.armies,  // Updated parameter
       owner: owner ?? this.owner,
       borderingProvinces: borderingProvinces ?? this.borderingProvinces,
     );
@@ -99,14 +130,16 @@ class Movement {
   final String destinationProvinceId;
   final int daysLeft;
   final int armySize;
-  final bool willStartBattle;  // Add flag to indicate if this movement will start a battle
+  final bool willStartBattle;
+  final String nationTag;  // Added to track the nation of the moving army
 
   const Movement({
     required this.originProvinceId,
     required this.destinationProvinceId,
     required this.daysLeft,
     required this.armySize,
-    this.willStartBattle = false,  // Default to false
+    this.willStartBattle = false,
+    required this.nationTag,  // Required parameter for the nation tag
   });
 
   Movement copyWith({
@@ -115,6 +148,7 @@ class Movement {
     int? daysLeft,
     int? armySize,
     bool? willStartBattle,
+    String? nationTag,
   }) {
     return Movement(
       originProvinceId: originProvinceId ?? this.originProvinceId,
@@ -122,8 +156,27 @@ class Movement {
       daysLeft: daysLeft ?? this.daysLeft,
       armySize: armySize ?? this.armySize,
       willStartBattle: willStartBattle ?? this.willStartBattle,
+      nationTag: nationTag ?? this.nationTag,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'originProvinceId': originProvinceId,
+        'destinationProvinceId': destinationProvinceId,
+        'daysLeft': daysLeft,
+        'armySize': armySize,
+        'willStartBattle': willStartBattle,
+        'nationTag': nationTag,
+      };
+
+  factory Movement.fromJson(Map<String, dynamic> json) => Movement(
+        originProvinceId: json['originProvinceId'] as String,
+        destinationProvinceId: json['destinationProvinceId'] as String,
+        daysLeft: json['daysLeft'] as int,
+        armySize: json['armySize'] as int,
+        willStartBattle: json['willStartBattle'] as bool? ?? false,
+        nationTag: json['nationTag'] as String,
+      );
 }
 
 class Nation {
@@ -229,7 +282,7 @@ class Nation {
   
   int getTotalArmy(List<Province> allProvinces) => 
     nationProvinces.fold(0, (sum, id) => 
-      sum + (allProvinces.where((p) => p.id == id).firstOrNull?.army ?? 0));
+      sum + (allProvinces.where((p) => p.id == id).firstOrNull?.armies.length ?? 0));
   
   Map<ResourceType, int> getResourceCounts(List<Province> allProvinces) {
     final counts = <ResourceType, int>{};
@@ -407,10 +460,10 @@ class Game {
   }
 
   Game _processMovements() {
+    print("\n=== PROCESSING MOVEMENTS ===");
     final updatedNations = nations.map((nation) {
       final updatedMovements = <Movement>[];
-      var provincesToUpdate = <String, int>{};
-      var newBattles = <Battle>[];
+      final newBattles = <Battle>[];
 
       for (final movement in nation.movements) {
         if (movement.daysLeft > 1) {
@@ -419,58 +472,111 @@ class Game {
         } else {
           // Movement completes
           final targetProvince = provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
-          final isHostileMove = playerNation.atWarWith.contains(targetProvince.owner);
+          final isHostileMove = nation.atWarWith.contains(targetProvince.owner);
 
-          if (isHostileMove && targetProvince.army > 0) {
-            // Start a battle
-            print('\n=== Starting New Battle ===');
-            print('Location: ${targetProvince.name}');
-            print('Attacker: ${nation.name} (${movement.armySize} troops)');
-            print('Defender: ${targetProvince.owner} (${targetProvince.army} troops)');
-            print('=== Battle Started ===\n');
-
+          if (isHostileMove && targetProvince.armies.isNotEmpty) {
+            // Start a battle - don't remove this movement yet as we'll handle it in the battle processing
+            print("Creating battle: ${nation.nationTag} -> ${targetProvince.owner} at ${targetProvince.name}");
             newBattles.add(Battle(
               provinceId: movement.destinationProvinceId,
               attackerTag: nation.nationTag,
               defenderTag: targetProvince.owner,
               attackerArmy: movement.armySize,
-              defenderArmy: targetProvince.army,
+              defenderArmy: targetProvince.totalArmySize,
+              isActive: true,
             ));
-          } else {
-            // Normal movement completion
-            provincesToUpdate[movement.destinationProvinceId] = 
-              (provincesToUpdate[movement.destinationProvinceId] ?? 0) + movement.armySize;
-            provincesToUpdate[movement.originProvinceId] = 
-              (provincesToUpdate[movement.originProvinceId] ?? 0) - movement.armySize;
           }
+          // Don't add completed movements to the updated list - they will be processed below
         }
       }
 
       return nation.copyWith(movements: updatedMovements);
     }).toList();
 
-    final updatedProvinces = provinces.map((province) {
-      final totalArmyChange = updatedNations.fold<int>(0, (sum, nation) {
-        final completedMovements = nation.movements.where(
-          (m) => m.daysLeft <= 1 && 
-          (m.destinationProvinceId == province.id || m.originProvinceId == province.id)
-        ).toList();
-
-        return sum + completedMovements.fold<int>(0, (moveSum, movement) {
-          if (movement.destinationProvinceId == province.id) {
-            return moveSum + movement.armySize;
-          } else if (movement.originProvinceId == province.id) {
-            return moveSum - movement.armySize;
+    // Map to track changes needed for each province
+    final provinceArmyChanges = <String, List<Army>>{};
+    
+    // Process completed movements that don't result in battles
+    for (final nation in nations) {
+      for (final movement in nation.movements) {
+        if (movement.daysLeft <= 1) {
+          final targetProvince = provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
+          final isHostileMove = nation.atWarWith.contains(targetProvince.owner);
+          
+          // Skip movements that will lead to battles - we handle those in battle processing
+          if (isHostileMove && targetProvince.armies.isNotEmpty) {
+            continue;
           }
-          return moveSum;
-        });
-      });
-
-      if (totalArmyChange != 0) {
-        return province.copyWith(army: province.army + totalArmyChange);
+          
+          print("Completing movement: ${nation.nationTag} from ${movement.originProvinceId} to ${movement.destinationProvinceId} (${movement.armySize} troops)");
+          
+          // Get the current armies at the destination
+          List<Army> destArmies = provinceArmyChanges[movement.destinationProvinceId] ?? 
+                       List.from(provinces.firstWhere((p) => p.id == movement.destinationProvinceId).armies);
+          
+          // Create a new army at the destination
+          final newArmy = Army(
+            id: 'army_${DateTime.now().millisecondsSinceEpoch}_${nation.nationTag}',
+            nationTag: nation.nationTag,
+            size: movement.armySize,
+          );
+          
+          // Add the new army to the destination
+          provinceArmyChanges[movement.destinationProvinceId] = [...destArmies, newArmy];
+          
+          // Mark the origin province for clearing only if we don't already have a change
+          if (!provinceArmyChanges.containsKey(movement.originProvinceId)) {
+            // Get current armies and remove only those from the moving nation
+            final originProvince = provinces.firstWhere((p) => p.id == movement.originProvinceId);
+            final remainingArmies = originProvince.armies.where((a) => a.nationTag != nation.nationTag).toList();
+            provinceArmyChanges[movement.originProvinceId] = remainingArmies;
+          }
+        }
+      }
+    }
+    
+    // Apply province army changes
+    final updatedProvinces = provinces.map((province) {
+      if (provinceArmyChanges.containsKey(province.id)) {
+        print("Updating province ${province.id} (${province.name}): ${province.armies.length} armies -> ${provinceArmyChanges[province.id]!.length} armies");
+        for (final army in provinceArmyChanges[province.id]!) {
+          print("  Army: ${army.id}, Nation: ${army.nationTag}, Size: ${army.size}");
+        }
+        return province.copyWith(armies: provinceArmyChanges[province.id]!);
       }
       return province;
     }).toList();
+
+    // Collect all battles that will start
+    final allNewBattles = <Battle>[];
+    for (final nation in nations) {
+      for (final movement in nation.movements.where((m) => m.daysLeft <= 1)) {
+        final targetProvince = provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
+        final isHostileMove = nation.atWarWith.contains(targetProvince.owner);
+        
+        if (isHostileMove && targetProvince.armies.isNotEmpty) {
+          final existingBattle = allNewBattles.firstWhere(
+            (b) => b.provinceId == movement.destinationProvinceId,
+            orElse: () => Battle(
+              provinceId: movement.destinationProvinceId,
+              attackerTag: nation.nationTag,
+              defenderTag: targetProvince.owner,
+              attackerArmy: movement.armySize,
+              defenderArmy: targetProvince.totalArmySize,
+              isActive: true,
+            ),
+          );
+          
+          if (!allNewBattles.contains(existingBattle)) {
+            allNewBattles.add(existingBattle);
+          }
+        }
+      }
+    }
+    
+    print("Updated provinces with armies: ${updatedProvinces.where((p) => p.armies.isNotEmpty).length}");
+    print("New battles: ${allNewBattles.length}");
+    print("=== END PROCESSING MOVEMENTS ===\n");
 
     return Game(
       id: id,
@@ -480,44 +586,35 @@ class Game {
       playerNationTag: playerNationTag,
       nations: updatedNations,
       provinces: updatedProvinces,
-      battles: [...battles, ...updatedNations.expand((n) => n.movements)
-        .where((m) => m.daysLeft <= 1)
-        .map((m) {
-          final targetProvince = provinces.firstWhere((p) => p.id == m.destinationProvinceId);
-          final isHostileMove = playerNation.atWarWith.contains(targetProvince.owner);
-          if (isHostileMove && targetProvince.army > 0) {
-            return Battle(
-              provinceId: m.destinationProvinceId,
-              attackerTag: playerNationTag,
-              defenderTag: targetProvince.owner,
-              attackerArmy: m.armySize,
-              defenderArmy: targetProvince.army,
-            );
-          }
-          return null;
-        })
-        .whereType<Battle>()
-        .toList()],
+      battles: [...battles.where((b) => b.isActive), ...allNewBattles],
     );
   }
 
   Game _processBattles(Game game) {
+    print("\n=== PROCESSING BATTLES ===");
     final updatedBattles = <Battle>[];
     final updatedProvinces = List<Province>.from(game.provinces);
     final updatedNations = List<Nation>.from(game.nations);
-    bool hadActiveBattle = false;
-
+    
     for (final battle in game.battles) {
       if (!battle.isActive) {
         updatedBattles.add(battle);
         continue;
       }
 
-      hadActiveBattle = true;
+      // Get the province where the battle is happening
+      final provinceIndex = updatedProvinces.indexWhere((p) => p.id == battle.provinceId);
+      if (provinceIndex == -1) {
+        // Province not found, skip this battle
+        updatedBattles.add(battle);
+        continue;
+      }
+      
+      final province = updatedProvinces[provinceIndex];
 
       // Debug logging for active battles
       print('\n=== Battle Update ===');
-      print('Location: ${updatedProvinces.firstWhere((p) => p.id == battle.provinceId).name}');
+      print('Location: ${province.name}');
       print('Attacker: ${updatedNations.firstWhere((n) => n.nationTag == battle.attackerTag).name}');
       print('Attacker Army: ${battle.attackerArmy}');
       print('Attacker Casualties: ${battle.attackerCasualties}');
@@ -525,50 +622,14 @@ class Game {
       print('Defender Army: ${battle.defenderArmy}');
       print('Defender Casualties: ${battle.defenderCasualties}');
 
-      // Simulate battle tick
-      final newAttackerArmy = max(0, battle.attackerArmy - 1000);
-      final newDefenderArmy = max(0, battle.defenderArmy - 1000);
+      // Simulate battle tick - each side loses troops
+      final newAttackerArmy = max(0, battle.attackerArmy - 5000);
+      final newDefenderArmy = max(0, battle.defenderArmy - 4000); // Defender has a slight advantage
       
       final newAttackerCasualties = battle.attackerCasualties + (battle.attackerArmy - newAttackerArmy);
       final newDefenderCasualties = battle.defenderCasualties + (battle.defenderArmy - newDefenderArmy);
 
-      // Calculate population losses (30% of casualties)
-      final attackerPopLoss = ((battle.attackerArmy - newAttackerArmy) * 0.3).round();
-      final defenderPopLoss = ((battle.defenderArmy - newDefenderArmy) * 0.3).round();
-
-      // Update nation populations based on casualties
-      updatedNations.where((n) => n.nationTag == battle.attackerTag).forEach((nation) {
-        // Distribute population loss across provinces
-        final provinceCount = nation.nationProvinces.length;
-        if (provinceCount > 0) {
-          final lossPerProvince = (attackerPopLoss / provinceCount).round();
-          for (final provinceId in nation.nationProvinces) {
-            final provinceIndex = updatedProvinces.indexWhere((p) => p.id == provinceId);
-            if (provinceIndex != -1) {
-              updatedProvinces[provinceIndex] = updatedProvinces[provinceIndex].copyWith(
-                population: max(0, updatedProvinces[provinceIndex].population - lossPerProvince),
-              );
-            }
-          }
-        }
-      });
-
-      updatedNations.where((n) => n.nationTag == battle.defenderTag).forEach((nation) {
-        // Distribute population loss across provinces
-        final provinceCount = nation.nationProvinces.length;
-        if (provinceCount > 0) {
-          final lossPerProvince = (defenderPopLoss / provinceCount).round();
-          for (final provinceId in nation.nationProvinces) {
-            final provinceIndex = updatedProvinces.indexWhere((p) => p.id == provinceId);
-            if (provinceIndex != -1) {
-              updatedProvinces[provinceIndex] = updatedProvinces[provinceIndex].copyWith(
-                population: max(0, updatedProvinces[provinceIndex].population - lossPerProvince),
-              );
-            }
-          }
-        }
-      });
-
+      // Check if battle is over
       final isBattleOver = newAttackerArmy == 0 || newDefenderArmy == 0;
       
       final updatedBattle = battle.copyWith(
@@ -581,19 +642,102 @@ class Game {
 
       if (isBattleOver) {
         print('\n=== Battle Ended ===');
-        print('Winner: ${newDefenderArmy == 0 ? "Attacker" : "Defender"}');
+        final attackerWon = newDefenderArmy == 0;
+        print('Winner: ${attackerWon ? "Attacker" : "Defender"}');
         print('Final Attacker Casualties: ${newAttackerCasualties}');
         print('Final Defender Casualties: ${newDefenderCasualties}');
         print('=== Battle Summary End ===\n');
 
-        // Update province owner if defender lost
-        if (newDefenderArmy == 0) {
-          final provinceIndex = updatedProvinces.indexWhere((p) => p.id == battle.provinceId);
-          if (provinceIndex != -1) {
-            updatedProvinces[provinceIndex] = updatedProvinces[provinceIndex].copyWith(
-              owner: battle.attackerTag,
-              army: newAttackerArmy,
+        // Update province ownership and armies based on battle outcome
+        if (attackerWon) {
+          // Attacker won - change province ownership and place remaining attacker army
+          final newArmy = Army(
+            id: 'army_conquest_${DateTime.now().millisecondsSinceEpoch}',
+            nationTag: battle.attackerTag,
+            size: newAttackerArmy,
+          );
+          
+          // Update the attacker nation's province list
+          final attackerIndex = updatedNations.indexWhere((n) => n.nationTag == battle.attackerTag);
+          if (attackerIndex != -1) {
+            final attackerNation = updatedNations[attackerIndex];
+            if (!attackerNation.nationProvinces.contains(battle.provinceId)) {
+              updatedNations[attackerIndex] = attackerNation.copyWith(
+                nationProvinces: [...attackerNation.nationProvinces, battle.provinceId],
+              );
+            }
+          }
+          
+          // Update the defender nation's province list
+          final defenderIndex = updatedNations.indexWhere((n) => n.nationTag == battle.defenderTag);
+          if (defenderIndex != -1) {
+            final defenderNation = updatedNations[defenderIndex];
+            updatedNations[defenderIndex] = defenderNation.copyWith(
+              nationProvinces: defenderNation.nationProvinces.where((p) => p != battle.provinceId).toList(),
             );
+          }
+          
+          // Update the province
+          updatedProvinces[provinceIndex] = province.copyWith(
+            owner: battle.attackerTag,
+            armies: newAttackerArmy > 0 ? [newArmy] : [],
+          );
+          
+          print("Province ${province.name} conquered by ${battle.attackerTag}");
+          if (newAttackerArmy > 0) {
+            print("Placing army of size ${newArmy.size} in province");
+          }
+        } else {
+          // Defender won - keep ownership but update defender army
+          // Filter out any attacker armies that might exist
+          final defenderArmies = province.armies.where((a) => a.nationTag == battle.defenderTag).toList();
+          
+          if (defenderArmies.isNotEmpty && newDefenderArmy > 0) {
+            // Update the first defender army's size
+            final updatedArmy = defenderArmies.first.copyWith(size: newDefenderArmy);
+            
+            // Keep any other armies that belong to the defender
+            final otherDefenderArmies = defenderArmies.sublist(min(1, defenderArmies.length));
+            
+            // Keep any armies belonging to nations that aren't part of this battle
+            final otherArmies = province.armies.where((a) => 
+              a.nationTag != battle.attackerTag && a.nationTag != battle.defenderTag).toList();
+            
+            updatedProvinces[provinceIndex] = province.copyWith(
+              armies: [updatedArmy, ...otherDefenderArmies, ...otherArmies],
+            );
+            
+            print("Defender ${battle.defenderTag} kept province ${province.name}");
+            print("Updated defender army to size ${updatedArmy.size}");
+          } else if (newDefenderArmy > 0) {
+            // No existing defender armies, create a new one
+            final newArmy = Army(
+              id: 'army_defense_${DateTime.now().millisecondsSinceEpoch}',
+              nationTag: battle.defenderTag,
+              size: newDefenderArmy,
+            );
+            
+            // Keep any armies belonging to nations that aren't part of this battle
+            final otherArmies = province.armies.where((a) => 
+              a.nationTag != battle.attackerTag && a.nationTag != battle.defenderTag).toList();
+            
+            updatedProvinces[provinceIndex] = province.copyWith(
+              armies: [newArmy, ...otherArmies],
+            );
+            
+            print("Defender ${battle.defenderTag} kept province ${province.name}");
+            print("Created new defender army of size ${newArmy.size}");
+          } else {
+            // No defender armies left (should not happen since defender won)
+            // Keep any armies belonging to nations that aren't part of this battle
+            final otherArmies = province.armies.where((a) => 
+              a.nationTag != battle.attackerTag && a.nationTag != battle.defenderTag).toList();
+            
+            updatedProvinces[provinceIndex] = province.copyWith(
+              armies: otherArmies,
+            );
+            
+            print("Defender ${battle.defenderTag} kept province ${province.name} but has no armies left");
           }
         }
       } else {
@@ -603,7 +747,10 @@ class Game {
       updatedBattles.add(updatedBattle);
     }
 
-    final result = Game(
+    print("Battles remaining active: ${updatedBattles.count((b) => b.isActive)}");
+    print("=== END PROCESSING BATTLES ===\n");
+    
+    return Game(
       id: game.id,
       gameName: game.gameName,
       date: game.date,
@@ -613,9 +760,6 @@ class Game {
       provinces: updatedProvinces,
       battles: updatedBattles,
     );
-
-    // Return whether there was an active battle along with the game state
-    return result;
   }
 
   Game startBattle(String provinceId, String attackerTag, String defenderTag, int attackerArmy, int defenderArmy) {

@@ -139,7 +139,13 @@ final world1914 = Game(
       industry: 50,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 201000,
+      armies: [
+        Army(
+          id: 'stras_army_1',
+          nationTag: 'GER',
+          size: 201000,
+        ),
+      ],
       owner: 'GER',
       borderingProvinces: ["Mulhouse","Lothringen","Metz","Zweibrücken","Durlach","Baden","Pfalz"],
     ),
@@ -153,7 +159,7 @@ final world1914 = Game(
       industry: 85,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     // Add each province from the list with appropriate stats
@@ -166,7 +172,7 @@ final world1914 = Game(
       industry: 65,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     // Add all remaining German provinces with consistent stats
@@ -179,7 +185,7 @@ final world1914 = Game(
       industry: 60,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     // Add remaining German provinces
@@ -192,7 +198,7 @@ final world1914 = Game(
       industry: 55,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -204,7 +210,7 @@ final world1914 = Game(
       industry: 50,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -216,7 +222,7 @@ final world1914 = Game(
       industry: 45,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -228,7 +234,7 @@ final world1914 = Game(
       industry: 42,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -240,7 +246,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -252,7 +258,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     // French provinces
@@ -265,7 +271,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -277,7 +283,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -289,7 +295,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -301,7 +307,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -313,7 +319,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -325,7 +331,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -337,7 +343,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -349,7 +355,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -361,7 +367,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -373,7 +379,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -385,7 +391,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -397,7 +403,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -409,7 +415,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -421,7 +427,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -433,7 +439,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -445,7 +451,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -457,7 +463,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -469,7 +475,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -481,7 +487,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -493,7 +499,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -505,7 +511,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -517,7 +523,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -529,7 +535,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -541,7 +547,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -553,7 +559,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -565,7 +571,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -577,7 +583,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -589,7 +595,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -601,7 +607,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -613,7 +619,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -625,7 +631,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'FRA',
       borderingProvinces: ['Bruges', 'Lille', 'Artois'],
     ),
@@ -638,7 +644,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -650,7 +656,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -662,8 +668,19 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      borderingProvinces: ["Barrois","Metz","Luxembourg","Lothringen","Rethel","Reims"],
-      army: 230000,
+      armies: [
+        Army(
+          id: 'verdun_army_1',
+          nationTag: 'FRA',
+          size: 130000,
+        ),
+        Army(
+          id: 'verdun_army_2',
+          nationTag: 'FRA',
+          size: 100000,
+        ),
+      ],
+      borderingProvinces: ["Barrois","Verdun","Metz","Straßburg","Mulhouse","Sundgau"],
       owner: 'FRA',
     ),
     Province(
@@ -675,7 +692,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -687,7 +704,18 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 240000,
+      armies: [
+        Army(
+          id: 'loth_army_1',
+          nationTag: 'FRA',
+          size: 140000,
+        ),
+        Army(
+          id: 'loth_army_2',
+          nationTag: 'FRA',
+          size: 100000,
+        ),
+      ],
       owner: 'FRA',
       borderingProvinces: ["Franche-Comté","Barrois","Verdun","Metz","Straßburg","Mulhouse","Sundgau"],
     ),
@@ -700,7 +728,18 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 260000,
+      armies: [
+        Army(
+          id: 'franc_army_1',
+          nationTag: 'FRA',
+          size: 160000,
+        ),
+        Army(
+          id: 'franc_army_2',
+          nationTag: 'FRA',
+          size: 100000,
+        ),
+      ],
       borderingProvinces: ["Dijonnais","Barrois","Lothringen","Sundgau","Salins","Fribourg","Bern"],
       owner: 'FRA',
     ),
@@ -713,7 +752,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -725,7 +764,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -737,7 +776,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -749,7 +788,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -761,7 +800,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -773,7 +812,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -785,7 +824,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -797,7 +836,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -809,7 +848,7 @@ final world1914 = Game(
       industry: 80,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -821,7 +860,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -833,7 +872,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -845,7 +884,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -857,7 +896,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -869,7 +908,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -881,7 +920,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -893,7 +932,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -905,7 +944,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -917,7 +956,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -929,7 +968,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -941,7 +980,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -953,7 +992,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -965,7 +1004,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -977,7 +1016,7 @@ final world1914 = Game(
       industry: 5,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -989,7 +1028,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -1001,7 +1040,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -1013,7 +1052,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     // Dutch provinces
@@ -1026,7 +1065,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
       borderingProvinces: ['Calais', 'Lille', 'Ghent'],
     ),
@@ -1039,7 +1078,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1051,7 +1090,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
       borderingProvinces: ['Calais', 'Artois', 'Bruges', 'Hainaut'],
     ),
@@ -1064,7 +1103,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1076,7 +1115,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1088,7 +1127,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1100,7 +1139,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1112,7 +1151,7 @@ final world1914 = Game(
       industry: 45,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1124,7 +1163,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
       borderingProvinces: ['Bruges', 'Brussels', 'Antwerpen'],
     ),
@@ -1137,7 +1176,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1149,7 +1188,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1161,7 +1200,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1173,7 +1212,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1185,7 +1224,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1197,7 +1236,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1209,7 +1248,7 @@ final world1914 = Game(
       industry: 15,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1221,7 +1260,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1233,7 +1272,7 @@ final world1914 = Game(
       industry: 50,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1245,7 +1284,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1257,7 +1296,7 @@ final world1914 = Game(
       industry: 8,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1269,7 +1308,7 @@ final world1914 = Game(
       industry: 6,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1281,7 +1320,7 @@ final world1914 = Game(
       industry: 10,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'NET',
     ),
     Province(
@@ -1293,7 +1332,7 @@ final world1914 = Game(
       industry: 38,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1305,7 +1344,7 @@ final world1914 = Game(
       industry: 36,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1317,7 +1356,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1329,7 +1368,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1341,7 +1380,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1353,7 +1392,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     // Add missing German provinces
@@ -1366,7 +1405,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 200000,
+      armies: [],
       borderingProvinces: ["Sundgau","Straßburg","Lothringen","Baden","Breisgau"],
       owner: 'GER',
     ),
@@ -1379,7 +1418,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 180000,
+      armies: [],
       borderingProvinces: ["Franche-Comté","Bern","Zürich","Breisgau","Mulhouse","Lothringen"],
       owner: 'GER',
     ),
@@ -1392,7 +1431,13 @@ final world1914 = Game(
       industry: 45,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 180000,
+      armies: [
+        Army(
+          id: 'metz_army_1',
+          nationTag: 'GER',
+          size: 120000,
+        ),
+      ],
       owner: 'GER',
       borderingProvinces: ["Lothringen","Verdun","Luxembourg","Trier","Zweibrücken","Straßburg"],
     ),
@@ -1405,7 +1450,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1417,7 +1462,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1429,7 +1474,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1441,7 +1486,7 @@ final world1914 = Game(
       industry: 33,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1453,7 +1498,7 @@ final world1914 = Game(
       industry: 40,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
       borderingProvinces: ['Straßburg', 'Mulhouse', 'Breisgau', 'Durlach'],
     ),
@@ -1466,7 +1511,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1478,7 +1523,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1490,7 +1535,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1502,7 +1547,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1514,7 +1559,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1526,7 +1571,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1538,7 +1583,7 @@ final world1914 = Game(
       industry: 42,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1550,7 +1595,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1562,7 +1607,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1574,7 +1619,7 @@ final world1914 = Game(
       industry: 20,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1586,7 +1631,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1598,7 +1643,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1610,7 +1655,7 @@ final world1914 = Game(
       industry: 38,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1622,7 +1667,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1634,7 +1679,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1646,7 +1691,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1658,7 +1703,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1670,7 +1715,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1682,7 +1727,7 @@ final world1914 = Game(
       industry: 25,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1694,7 +1739,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1706,7 +1751,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1718,7 +1763,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1730,7 +1775,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1742,7 +1787,7 @@ final world1914 = Game(
       industry: 36,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1754,7 +1799,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1766,7 +1811,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1778,7 +1823,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1790,7 +1835,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1802,7 +1847,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1814,7 +1859,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1826,7 +1871,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1838,7 +1883,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1850,7 +1895,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1862,7 +1907,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1874,7 +1919,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1886,7 +1931,7 @@ final world1914 = Game(
       industry: 36,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1898,7 +1943,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1910,7 +1955,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1922,7 +1967,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1934,7 +1979,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1946,7 +1991,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1958,7 +2003,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1970,7 +2015,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1982,7 +2027,7 @@ final world1914 = Game(
       industry: 38,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -1994,7 +2039,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2006,7 +2051,7 @@ final world1914 = Game(
       industry: 42,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2018,7 +2063,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2030,7 +2075,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2042,7 +2087,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2054,7 +2099,7 @@ final world1914 = Game(
       industry: 38,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2066,7 +2111,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2078,7 +2123,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2090,7 +2135,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2102,7 +2147,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2114,7 +2159,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2126,7 +2171,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2138,7 +2183,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2150,7 +2195,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2162,7 +2207,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2174,7 +2219,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2186,7 +2231,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2198,7 +2243,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2210,7 +2255,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2222,7 +2267,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2234,7 +2279,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2246,7 +2291,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2258,7 +2303,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2270,7 +2315,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2282,7 +2327,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2294,7 +2339,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2306,7 +2351,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2318,7 +2363,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2330,7 +2375,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2342,7 +2387,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2354,7 +2399,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2366,7 +2411,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2378,7 +2423,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2390,7 +2435,7 @@ final world1914 = Game(
       industry: 36,
       buildings: [],
       resourceType: ResourceType.gold,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2402,7 +2447,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2414,7 +2459,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2426,7 +2471,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2438,7 +2483,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2450,7 +2495,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2462,7 +2507,7 @@ final world1914 = Game(
       industry: 30,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2474,7 +2519,7 @@ final world1914 = Game(
       industry: 32,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2486,7 +2531,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2498,7 +2543,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2510,7 +2555,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2522,7 +2567,7 @@ final world1914 = Game(
       industry: 26,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2534,7 +2579,7 @@ final world1914 = Game(
       industry: 24,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2546,7 +2591,7 @@ final world1914 = Game(
       industry: 28,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2558,7 +2603,7 @@ final world1914 = Game(
       industry: 38,
       buildings: [],
       resourceType: ResourceType.iron,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2570,7 +2615,7 @@ final world1914 = Game(
       industry: 22,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
     Province(
@@ -2582,7 +2627,7 @@ final world1914 = Game(
       industry: 35,
       buildings: [],
       resourceType: ResourceType.food,
-      army: 0,
+      armies: [],
       owner: 'FRA',
     ),
     Province(
@@ -2594,7 +2639,7 @@ final world1914 = Game(
       industry: 45,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'FRA',
       borderingProvinces: ['Calais', 'Lille', 'Cambray', 'Picardie'],
     ),
@@ -2607,7 +2652,7 @@ final world1914 = Game(
       industry: 34,
       buildings: [],
       resourceType: ResourceType.coal,
-      army: 0,
+      armies: [],
       owner: 'GER',
     ),
   ],

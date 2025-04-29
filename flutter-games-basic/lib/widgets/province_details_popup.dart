@@ -65,7 +65,7 @@ class ProvinceDetailsPopup extends StatelessWidget {
             industry: 0,
             buildings: [],
             resourceType: ResourceType.none,
-            army: 0,
+            armies: [],
             owner: '',
             borderingProvinces: [],
           ),
@@ -136,7 +136,7 @@ class ProvinceDetailsPopup extends StatelessWidget {
             const SizedBox(height: 8),
             if (canSeeArmy) ...[
               Text(
-                'Army: ${province.army}',
+                'Army: ${province.armies.fold(0, (sum, army) => sum + army.size)}',
                 style: const TextStyle(
                   fontSize: 16,
                   color: Colors.black87,

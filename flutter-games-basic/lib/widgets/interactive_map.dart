@@ -17,13 +17,19 @@ import 'dart:async';
 
 
 class InteractiveMap extends StatefulWidget {
-  final Game game;
+  final List<Province> provinces;
+  final List<Nation> nations;
   final Function(Game) onGameUpdate;
+  final Function(Movement)? onMovementCreated;
+  final Game game;
 
   const InteractiveMap({
     super.key, 
-    required this.game,
+    required this.provinces,
+    required this.nations,
     required this.onGameUpdate,
+    required this.game,
+    this.onMovementCreated,
   });
 
   @override
@@ -59,6 +65,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   Matrix4? _lastTransform;
   bool _isInteracting = false;
   Timer? _interactionTimer;
+
+  final Map<String, Color> _highlightedProvinces = {};
 
   // Helper method to convert hex color string to Color
   Color _hexToColor(String hexString) {
@@ -103,7 +111,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         industry: 0,
         buildings: [],
         resourceType: ResourceType.none,
-        army: 0,
+        armies: [],
         owner: '',
       ),
     );
@@ -250,7 +258,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     if (selectedRegion == null) return;
     
     final province = _getProvinceForRegion(selectedRegion!.id);
-    if (!_canSelectProvince(province)) return;
+    if (province.armies.isEmpty) return;
     
     setState(() {
       _isMovementMode = true;
@@ -294,6 +302,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
           destinationProvinceId: '',
           daysLeft: 0,
           armySize: 0,
+          nationTag: '',
         ),
       );
       if (movement.originProvinceId.isNotEmpty) {
@@ -313,6 +322,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
           destinationProvinceId: '',
           daysLeft: 0,
           armySize: 0,
+          nationTag: '',
         ),
       );
       if (movement.originProvinceId.isNotEmpty) {
@@ -356,7 +366,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
           industry: 0,
           buildings: [],
           resourceType: ResourceType.none,
-          army: 0,
+          armies: [],
           owner: '',
           borderingProvinces: [],
         ),
@@ -396,7 +406,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         industry: 0,
         buildings: [],
         resourceType: ResourceType.none,
-        army: 0,
+        armies: [],
         owner: '',
         borderingProvinces: [],
       ),
@@ -454,7 +464,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         industry: 0,
         buildings: [],
         resourceType: ResourceType.none,
-        army: 0,
+        armies: [],
         owner: '',
         borderingProvinces: [],
       ),
@@ -507,7 +517,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
             industry: 0,
             buildings: [],
             resourceType: ResourceType.none,
-            army: 0,
+            armies: [],
             owner: '',
             borderingProvinces: [],
           ),
@@ -516,7 +526,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         
         // Only allow movement if we own the origin province
         if (!_hasOutgoingMovement(selectedRegion!.id) && 
-            originProvince.army > 0 && 
+            originProvince.armies.isNotEmpty && 
             _canSelectProvince(originProvince) && 
             _canMoveToProvince(targetProvince)) {
           // If this is a new target, set it as movement target
@@ -567,25 +577,40 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     if (selectedRegion == null) return;
     
     final originProvince = _getProvinceForRegion(selectedRegion!.id);
-    if (originProvince.army <= 0) return;
+    if (originProvince.armies.isEmpty) return;
+
+    print('\n=== DEBUG: Starting Movement ===');
+    print('From province: ${originProvince.id} (${originProvince.name})');
+    print('To province: ${destinationId}');
+    print('Origin province armies before movement:');
+    for (final army in originProvince.armies) {
+      print('  Army ID: ${army.id}, Nation: ${army.nationTag}, Size: ${army.size}');
+    }
+    print('Total army size: ${originProvince.totalArmySize}');
 
     final targetProvince = _getProvinceForRegion(destinationId);
     final isHostileMove = _isHostileMovement(targetProvince);
 
-    if (isHostileMove && targetProvince.army > 0) {
+    final totalArmySize = originProvince.armies.fold<int>(0, (sum, army) => sum + army.size);
+
+    if (isHostileMove && targetProvince.armies.isNotEmpty) {
       // Start movement that will lead to a battle
       final updatedNations = widget.game.nations.map((nation) {
         if (nation.nationTag == widget.game.playerNationTag) {
+          // Create a movement
+          final movement = Movement(
+            originProvinceId: selectedRegion!.id,
+            destinationProvinceId: destinationId,
+            daysLeft: daysRequired,
+            armySize: totalArmySize,
+            willStartBattle: true,
+            nationTag: nation.nationTag,
+          );
+          print('Creating movement: ${movement.originProvinceId} -> ${movement.destinationProvinceId} (Army size: ${movement.armySize})');
           return nation.copyWith(
             movements: [
               ...nation.movements,
-              Movement(
-                originProvinceId: selectedRegion!.id,
-                destinationProvinceId: destinationId,
-                daysLeft: daysRequired,
-                armySize: originProvince.army,
-                willStartBattle: true,
-              ),
+              movement,
             ],
           );
         }
@@ -595,7 +620,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       // Remove army from origin province
       final updatedProvinces = widget.game.provinces.map((p) {
         if (p.id == selectedRegion!.id) {
-          return p.copyWith(army: 0);
+          print('Removing armies from origin province: ${p.id}');
+          return p.copyWith(armies: []);
         }
         return p;
       }).toList();
@@ -616,15 +642,19 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       // Normal movement
       final updatedNations = widget.game.nations.map((nation) {
         if (nation.nationTag == widget.game.playerNationTag) {
+          // Create a movement
+          final movement = Movement(
+            originProvinceId: selectedRegion!.id,
+            destinationProvinceId: destinationId,
+            daysLeft: daysRequired,
+            armySize: totalArmySize,
+            nationTag: nation.nationTag,
+          );
+          print('Creating movement: ${movement.originProvinceId} -> ${movement.destinationProvinceId} (Army size: ${movement.armySize})');
           return nation.copyWith(
             movements: [
               ...nation.movements,
-              Movement(
-                originProvinceId: selectedRegion!.id,
-                destinationProvinceId: destinationId,
-                daysLeft: daysRequired,
-                armySize: originProvince.army,
-              ),
+              movement,
             ],
           );
         }
@@ -634,7 +664,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       // Remove army from origin province
       final updatedProvinces = widget.game.provinces.map((p) {
         if (p.id == selectedRegion!.id) {
-          return p.copyWith(army: 0);
+          print('Removing armies from origin province: ${p.id}');
+          return p.copyWith(armies: []);
         }
         return p;
       }).toList();
@@ -657,6 +688,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       _isMovementMode = false;
       selectedRegion = null;
     });
+    print('=== Movement Setup Complete ===\n');
   }
 
   void _cancelMovementFromProvince(String provinceId) {
@@ -715,83 +747,57 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     print('Player nation changed: ${oldWidget.game.playerNationTag != widget.game.playerNationTag}');
     print('Province count changed: ${oldWidget.game.provinces.length != widget.game.provinces.length}');
     
-    // Check for movements when date changes
+    // Check if provinces or movements have changed
+    final oldMovementCount = oldWidget.game.nations.fold<int>(0, (count, nation) => count + nation.movements.length);
+    final newMovementCount = widget.game.nations.fold<int>(0, (count, nation) => count + nation.movements.length);
+    
+    print('Movement count: $oldMovementCount -> $newMovementCount');
+    
+    // Check provinces with armies
+    final provincesWithArmies = widget.game.provinces.where((p) => p.armies.isNotEmpty).toList();
+    print('Provinces with armies: ${provincesWithArmies.length}');
+    for (final province in provincesWithArmies) {
+      print('  Province ${province.id} (${province.name}): ${province.armies.length} armies, total size: ${province.totalArmySize}');
+      for (final army in province.armies) {
+        print('    Army ID: ${army.id}, Nation: ${army.nationTag}, Size: ${army.size}');
+      }
+    }
+    
+    // Check if date changed
     if (oldWidget.game.date != widget.game.date) {
       print('\n=== Movement Status for ${widget.game.date} ===');
       
-      // Track total movements
-      int totalMovements = 0;
-      int completedMovements = 0;
-      String? completedMovementDest = null;
-      
-      // First, check for movements that were about to complete in the previous state
-      for (final nation in oldWidget.game.nations) {
+      // Track active movements
+      int activeMovements = 0;
+      for (final nation in widget.game.nations) {
         if (nation.movements.isEmpty) continue;
         
-        print('\nNation: ${nation.nationTag}');
+        print('\nNation: ${nation.nationTag} (${nation.movements.length} movements)');
         for (final movement in nation.movements) {
-          // Check if movement was about to complete (daysLeft = 1)
-          final wasAboutToComplete = movement.daysLeft == 1;
-          if (wasAboutToComplete) {
-            // Check if this movement is no longer in the current state
-            final currentNation = widget.game.nations.firstWhere(
-              (n) => n.nationTag == nation.nationTag,
-              orElse: () => Nation(
-                nationTag: '',
-                name: '',
-                color: '',
-                hexColor: '',
-                nationProvinces: [],
-                allies: [],
-                borderProvinces: [],
-                gold: 0,
-                researchPoints: 0,
-                currentResearchId: null,
-                currentResearchProgress: 0,
-                buildQueue: null,
-                isAI: false,
-                armyReserve: 0,
-              ),
-            );
-            
-            final movementStillExists = currentNation.movements.any(
-              (m) => m.originProvinceId == movement.originProvinceId && 
-                     m.destinationProvinceId == movement.destinationProvinceId
-            );
-            
-            if (!movementStillExists) {
-              completedMovements++;
-              completedMovementDest = movement.destinationProvinceId;
-            }
-          }
-          
-          print('Previous Movement:');
+          activeMovements++;
           print('  From: ${movement.originProvinceId}');
           print('  To: ${movement.destinationProvinceId}');
           print('  Army size: ${movement.armySize}');
           print('  Days left: ${movement.daysLeft}');
-          print('  Status: ${wasAboutToComplete ? 'Was about to complete' : 'In progress'}');
+          
+          // Check origin and destination provinces
+          final originProvince = widget.game.provinces.firstWhere(
+            (p) => p.id == movement.originProvinceId,
+            orElse: () => Province(id: '', name: '', path: '', population: 0, goldIncome: 0, industry: 0, buildings: [], resourceType: ResourceType.none, armies: [], owner: '', borderingProvinces: []),
+          );
+          
+          final destProvince = widget.game.provinces.firstWhere(
+            (p) => p.id == movement.destinationProvinceId,
+            orElse: () => Province(id: '', name: '', path: '', population: 0, goldIncome: 0, industry: 0, buildings: [], resourceType: ResourceType.none, armies: [], owner: '', borderingProvinces: []),
+          );
+          
+          print('  Origin province (${originProvince.id}): ${originProvince.armies.length} armies, total size: ${originProvince.totalArmySize}');
+          print('  Destination province (${destProvince.id}): ${destProvince.armies.length} armies, total size: ${destProvince.totalArmySize}');
         }
       }
       
-      // Count current active movements
-      for (final nation in widget.game.nations) {
-        totalMovements += nation.movements.length;
-      }
-      
-      print('\nMovement Summary:');
-      print('Total active movements: $totalMovements');
-      print('Movements just completed: $completedMovements');
+      print('\nActive movements: $activeMovements');
       print('=== End Movement Status ===\n');
-
-      // If we have a movement that just completed, trigger a repaint
-      if (completedMovementDest != null) {
-        print('\n=== Handling Completed Movement ===');
-        print('Triggering repaint for completed movement');
-        // handleRegionTap(completedMovementDest);
-        _triggerRepaint();
-        print('=== Completed Movement Handled ===\n');
-      }
     }
     
     print('=== InteractiveMap didUpdateWidget Complete ===');
@@ -846,7 +852,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
               transformationController: transformationController,
               boundaryMargin: const EdgeInsets.all(8.0),
               minScale: 1.0,
-              maxScale: 20.0,
+              maxScale: 40.0,
               constrained: false,
               child: RepaintBoundary(
                 child: CustomPaint(
@@ -1012,20 +1018,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                                 ],
                               ),
                             ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (_hasOutgoingMovement(selectedRegion!.id)) ...[
-                                Expanded(
-                                  child: _buildCancelMovementButton(),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Expanded(
-                                child: _buildDetailsButton(),
-                              ),
-                            ],
-                          ),
+                          _buildActionButtons(),
                         ],
                       ),
                     ),
@@ -1043,9 +1036,7 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
                   if (_showNationDetails && _selectedNation != null)
                     NationDetailsPopup(
                       nation: _selectedNation!,
-                      playerNation: widget.game.nations.firstWhere(
-                        (n) => n.nationTag == widget.game.playerNationTag,
-                      ),
+                      playerNation: widget.game.playerNation,
                       game: widget.game,
                       onClose: () {
                         setState(() {
@@ -1138,6 +1129,27 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        if (selectedRegion != null && _hasOutgoingMovement(selectedRegion!.id))
+          Expanded(
+            child: _buildCancelMovementButton(),
+          ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildDetailsButton(),
+        ),
+        const SizedBox(width: 8),
+        // Only show recruit button if we own the province
+        if (selectedRegion != null) 
+          Expanded(
+            child: _buildRecruitButton(),
+          ),
+      ],
     );
   }
 
@@ -1236,6 +1248,119 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
         ),
       ),
     );
+  }
+
+  Widget _buildRecruitButton() {
+    final province = _getProvinceForRegion(selectedRegion!.id);
+    // Only show recruit button if we own the province
+    if (province.owner != widget.game.playerNationTag) {
+      return const SizedBox.shrink();
+    }
+    
+    final playerNation = widget.game.playerNation;
+    final canAfford = playerNation.gold >= 3000 && playerNation.armyReserve >= 30000;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      transform: Matrix4.translationValues(0, -2, 0),
+      decoration: BoxDecoration(
+        color: canAfford ? const Color(0xFF6EC53E) : Colors.grey,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: canAfford ? const Color(0xFF4A9E1C) : Colors.grey.shade600,
+            offset: const Offset(0, 4),
+            blurRadius: 0,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: canAfford ? _recruitArmy : null,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Recruit',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _recruitArmy() {
+    if (selectedRegion == null) return;
+    
+    final province = _getProvinceForRegion(selectedRegion!.id);
+    final playerNation = widget.game.playerNation;
+    
+    // Check if we have enough resources
+    if (playerNation.gold < 3000 || playerNation.armyReserve < 30000) {
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Not enough resources: ${playerNation.gold < 3000 ? "Gold" : "Army reserves"} too low'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+    
+    // Create a new army in the province
+    final updatedNations = widget.game.nations.map((nation) {
+      if (nation.nationTag == widget.game.playerNationTag) {
+        return nation.copyWith(
+          gold: nation.gold - 3000,
+          armyReserve: nation.armyReserve - 30000,
+        );
+      }
+      return nation;
+    }).toList();
+    
+    // Add the army to the province
+    final updatedProvinces = widget.game.provinces.map((p) {
+      if (p.id == selectedRegion!.id) {
+        final newArmy = Army(
+          id: 'army_${DateTime.now().millisecondsSinceEpoch}',
+          nationTag: widget.game.playerNationTag,
+          size: 30000,
+        );
+        return p.copyWith(
+          armies: [...p.armies, newArmy],
+        );
+      }
+      return p;
+    }).toList();
+    
+    // Update the game
+    final updatedGame = Game(
+      id: widget.game.id,
+      gameName: widget.game.gameName,
+      date: widget.game.date,
+      mapName: widget.game.mapName,
+      playerNationTag: widget.game.playerNationTag,
+      nations: updatedNations,
+      provinces: updatedProvinces,
+      battles: widget.game.battles,
+    );
+    
+    widget.onGameUpdate(updatedGame);
+    _triggerRepaint(); // Force a repaint to show the new army
   }
 
   void _handleGameUpdate(Game updatedGame) {
@@ -1352,7 +1477,7 @@ class MapPainter extends CustomPainter {
           industry: 0,
           buildings: [],
           resourceType: ResourceType.none,
-          army: 0,
+          armies: [],
           owner: '',
           borderingProvinces: [],
         ),
@@ -1384,7 +1509,7 @@ class MapPainter extends CustomPainter {
         industry: 0,
         buildings: [],
         resourceType: ResourceType.none,
-        army: 0,
+        armies: [],
         owner: '',
         borderingProvinces: [],
       ),
@@ -1400,13 +1525,14 @@ class MapPainter extends CustomPainter {
           destinationProvinceId: '',
           daysLeft: 0,
           armySize: 0,
+          nationTag: '',
         ),
       );
       if (movement.originProvinceId.isNotEmpty) {
         return movement.armySize;  // Show the moving army size
       }
     }
-    return province.army;  // Return actual army size if no movement
+    return province.armies.fold<int>(0, (sum, army) => sum + army.size);  // Return actual army size if no movement
   }
 
   bool _canMoveToProvince(Province targetProvince) {
@@ -1424,7 +1550,7 @@ class MapPainter extends CustomPainter {
         industry: 0,
         buildings: [],
         resourceType: ResourceType.none,
-        army: 0,
+        armies: [],
         owner: '',
         borderingProvinces: [],
       ),
@@ -1596,7 +1722,7 @@ class MapPainter extends CustomPainter {
           industry: 0,
           buildings: [],
           resourceType: ResourceType.none,
-          army: 0,
+          armies: [],
           owner: '',
           borderingProvinces: [],
         ),
@@ -1916,7 +2042,7 @@ class MapPainter extends CustomPainter {
               industry: 0,
               buildings: [],
               resourceType: ResourceType.none,
-              army: 0,
+              armies: [],
               owner: '',
               borderingProvinces: [],
             ),
@@ -1946,7 +2072,7 @@ class MapPainter extends CustomPainter {
           industry: 0,
           buildings: [],
           resourceType: ResourceType.none,
-          army: 0,
+          armies: [],
           owner: '',
           borderingProvinces: [],
         ),
@@ -1967,7 +2093,7 @@ class MapPainter extends CustomPainter {
               industry: 0,
               buildings: [],
               resourceType: ResourceType.none,
-              army: 0,
+              armies: [],
               owner: '',
               borderingProvinces: [],
             ),
@@ -2038,6 +2164,13 @@ class MapPainter extends CustomPainter {
       onRegionSelected(null);
     }
     return true;
+  }
+
+  Offset _getProvinceCenter(Province province) {
+    final path = cachedPaths[province.id];
+    if (path == null) return Offset.zero;
+    final bounds = path.getBounds();
+    return bounds.center;
   }
 }
 

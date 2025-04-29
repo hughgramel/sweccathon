@@ -127,6 +127,8 @@ class GamePersistenceService {
       'destinationProvinceId': movement.destinationProvinceId,
       'daysLeft': movement.daysLeft,
       'armySize': movement.armySize,
+      'nationTag': movement.nationTag,
+      'willStartBattle': movement.willStartBattle,
     };
   }
 
@@ -141,7 +143,7 @@ class GamePersistenceService {
       'industry': province.industry,
       'buildings': province.buildings.map((building) => _buildingToJson(building)).toList(),
       'resourceType': province.resourceType.index,
-      'army': province.army,
+      'armies': province.armies.map((army) => _armyToJson(army)).toList(),
       'owner': province.owner,
       'borderingProvinces': province.borderingProvinces,
     };
@@ -165,6 +167,15 @@ class GamePersistenceService {
       'provinceId': build.provinceId,
       'timeStart': build.timeStart,
       'timeFinish': build.timeFinish,
+    };
+  }
+
+  /// Converts an Army object to JSON
+  Map<String, dynamic> _armyToJson(Army army) {
+    return {
+      'id': army.id,
+      'nationTag': army.nationTag,
+      'size': army.size,
     };
   }
 
@@ -220,6 +231,8 @@ class GamePersistenceService {
       destinationProvinceId: json['destinationProvinceId'] as String,
       daysLeft: (json['daysLeft'] as num).toInt(),
       armySize: (json['armySize'] as num).toInt(),
+      nationTag: json['nationTag'] as String,
+      willStartBattle: json['willStartBattle'] as bool? ?? false,
     );
   }
 
@@ -236,7 +249,7 @@ class GamePersistenceService {
           .map((buildingJson) => _buildingFromJson(buildingJson as Map<String, dynamic>))
           .toList(),
       resourceType: ResourceType.values[json['resourceType'] as int],
-      army: (json['army'] as num).toInt(),
+      armies: (json['armies'] as List?)?.map((armyJson) => _armyFromJson(armyJson as Map<String, dynamic>)).toList() ?? [],
       owner: json['owner'] as String,
       borderingProvinces: List<String>.from(json['borderingProvinces'] as List? ?? []),
     );
@@ -262,6 +275,15 @@ class GamePersistenceService {
       provinceId: json['provinceId'] as String,
       timeStart: (json['timeStart'] as num).toInt(),
       timeFinish: (json['timeFinish'] as num).toInt(),
+    );
+  }
+
+  /// Creates an Army object from JSON
+  Army _armyFromJson(Map<String, dynamic> json) {
+    return Army(
+      id: json['id'] as String,
+      nationTag: json['nationTag'] as String,
+      size: (json['size'] as num).toInt(),
     );
   }
 

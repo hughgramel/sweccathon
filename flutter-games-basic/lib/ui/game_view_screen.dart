@@ -333,6 +333,8 @@ class _GameViewScreenState extends State<GameViewScreen> with SingleTickerProvid
                 color: const Color.fromRGBO(143, 178, 187, 1.0),
                 child: InteractiveMap(
                   game: currentGame,
+                  provinces: currentGame.provinces,
+                  nations: currentGame.nations,
                   onGameUpdate: _handleGameUpdate,
                 ),
               ),
