@@ -1435,7 +1435,7 @@ final world1914 = Game(
         Army(
           id: 'metz_army_1',
           nationTag: 'GER',
-          size: 120000,
+          size: 800000,
         ),
       ],
       owner: 'GER',
