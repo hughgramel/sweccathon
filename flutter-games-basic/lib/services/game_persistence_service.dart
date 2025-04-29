@@ -114,6 +114,17 @@ class GamePersistenceService {
       'currentResearchProgress': nation.currentResearchProgress,
       'buildQueue': nation.buildQueue?.map((build) => _queuedBuildToJson(build)).toList(),
       'isAI': nation.isAI,
+      'movements': nation.movements.map((movement) => _movementToJson(movement)).toList(),
+    };
+  }
+
+  /// Converts a Movement object to JSON
+  Map<String, dynamic> _movementToJson(Movement movement) {
+    return {
+      'originProvinceId': movement.originProvinceId,
+      'destinationProvinceId': movement.destinationProvinceId,
+      'daysLeft': movement.daysLeft,
+      'armySize': movement.armySize,
     };
   }
 
@@ -190,6 +201,20 @@ class GamePersistenceService {
               (json['buildQueue'] as List).map((x) => _queuedBuildFromJson(x as Map<String, dynamic>)))
           : null,
       isAI: json['isAI'] as bool,
+      movements: json['movements'] != null
+          ? List<Movement>.from(
+              (json['movements'] as List).map((x) => _movementFromJson(x as Map<String, dynamic>)))
+          : [],
+    );
+  }
+
+  /// Creates a Movement object from JSON
+  Movement _movementFromJson(Map<String, dynamic> json) {
+    return Movement(
+      originProvinceId: json['originProvinceId'] as String,
+      destinationProvinceId: json['destinationProvinceId'] as String,
+      daysLeft: (json['daysLeft'] as num).toInt(),
+      armySize: (json['armySize'] as num).toInt(),
     );
   }
 

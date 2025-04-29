@@ -129,8 +129,8 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     
     // Set initial transformation to center the map
     transformationController.value = Matrix4.identity()
-      ..scale(2.0)  // Initial zoom level
-      ..translate(-100.0,);  // Center the map
+      ..scale(4.0)  // Initial zoom level
+      ..translate(-550.0,0.0);  // Center the map
     
     print('Starting to load regions...');
     loadRegions();
@@ -368,6 +368,14 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
     final targetProvince = _getProvinceForRegion(regionId);
     
     setState(() {
+      // If clicking the same province that's already selected, unselect it
+      if (selectedRegion != null && regionId == selectedRegion!.id) {
+        selectedRegion = null;
+        _showProvinceDetails = false;
+        _movementTargetId = null;
+        return;
+      }
+
       if (selectedRegion != null && regionId != selectedRegion!.id) {
         final originProvince = _getProvinceForRegion(selectedRegion!.id);
         if (originProvince.army > 0 && _canSelectProvince(originProvince) && _canMoveToProvince(targetProvince)) {
