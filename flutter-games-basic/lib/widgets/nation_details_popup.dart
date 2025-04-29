@@ -58,6 +58,73 @@ class NationDetailsPopup extends StatelessWidget {
     return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
   }
 
+  void _showWarStatistics(BuildContext context) {
+    // Calculate war casualties and deaths
+    int attackerCasualties = 0;
+    int defenderCasualties = 0;
+    
+    // Find battles between player and this nation
+    for (final battle in game.battles) {
+      if ((battle.attackerTag == playerNation.nationTag && battle.defenderTag == nation.nationTag) ||
+          (battle.attackerTag == nation.nationTag && battle.defenderTag == playerNation.nationTag)) {
+        
+        if (battle.attackerTag == playerNation.nationTag) {
+          attackerCasualties += battle.attackerCasualties;
+          defenderCasualties += battle.defenderCasualties;
+        } else {
+          attackerCasualties += battle.defenderCasualties;
+          defenderCasualties += battle.attackerCasualties;
+        }
+      }
+    }
+    
+    final attackerDeaths = (attackerCasualties * 0.3).round();
+    final defenderDeaths = (defenderCasualties * 0.3).round();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('War with ${nation.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text('Your Nation', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Casualties: ${_formatNumber(attackerCasualties)}'),
+                      Text('Deaths: ${_formatNumber(attackerDeaths)}'),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(nation.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Casualties: ${_formatNumber(defenderCasualties)}'),
+                      Text('Deaths: ${_formatNumber(defenderDeaths)}'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAtWar = playerNation.atWarWith.contains(nation.nationTag);
@@ -192,7 +259,7 @@ class NationDetailsPopup extends StatelessWidget {
                           onTap: onDeclareWar,
                         ),
                       ),
-                    if (isAtWar)
+                    if (isAtWar) ...[
                       Expanded(
                         child: _ActionButton(
                           label: 'Make Peace',
@@ -201,6 +268,16 @@ class NationDetailsPopup extends StatelessWidget {
                           onTap: onMakePeace,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ActionButton(
+                          label: 'View War',
+                          color: const Color(0xFFE57373),
+                          shadowColor: const Color(0xFFC62828),
+                          onTap: () => _showWarStatistics(context),
+                        ),
+                      ),
+                    ],
                     if (!isAtWar && !isAllied)
                       Expanded(
                         child: _ActionButton(
@@ -287,7 +364,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       transform: Matrix4.translationValues(0, -2, 0),
       decoration: BoxDecoration(
         color: color,
@@ -307,7 +384,7 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             child: Text(
               label,
               textAlign: TextAlign.center,

@@ -2058,7 +2058,7 @@ class MapPainter extends CustomPainter {
             color: Colors.white,
             fontSize: fontSize,
             fontWeight: FontWeight.w600,
-            letterSpacing: -fontSize * 0.14, // Reduced letter spacing
+            letterSpacing: -fontSize * 0.05, // Reduced negative letter spacing
           ),
         ),
         textDirection: TextDirection.ltr,
