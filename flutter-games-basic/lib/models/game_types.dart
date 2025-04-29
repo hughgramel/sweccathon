@@ -747,7 +747,7 @@ class Game {
       updatedBattles.add(updatedBattle);
     }
 
-    print("Battles remaining active: ${updatedBattles.count((b) => b.isActive)}");
+    print("Battles remaining active: ${updatedBattles.where((b) => b.isActive).length}");
     print("=== END PROCESSING BATTLES ===\n");
     
     return Game(
