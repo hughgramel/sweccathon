@@ -443,6 +443,27 @@ class Game {
             );
           }
         }
+        
+        // TESTING: Add 30,000 French troops to Verdun, Lothringen, and Franche-Comté on the first day of each month
+        if (province.owner == 'FRA' && 
+            (province.id == 'Verdun' || 
+             province.id == 'Lothringen' || 
+             province.id == 'Franche-Comté')) {
+          
+          // Create a new army to add for testing
+          final newTestArmy = Army(
+            id: 'monthly_reinforcement_${DateTime.now().millisecondsSinceEpoch}_${province.id}',
+            nationTag: 'FRA',
+            size: 30000,
+          );
+          
+          print("TESTING: Adding 30,000 French troops to ${province.name} for monthly reinforcement");
+          
+          // Add the new army to this province's existing armies
+          return province.copyWith(
+            armies: [...province.armies, newTestArmy],
+          );
+        }
       }
       return province;
     }).toList();
@@ -503,7 +524,34 @@ class Game {
           final targetProvince = provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
           final isHostileMove = nation.atWarWith.contains(targetProvince.owner);
           
-          // Skip movements that will lead to battles - we handle those in battle processing
+          // Check if there's an active battle in the destination province
+          final existingBattle = battles.firstWhere(
+            (b) => b.provinceId == movement.destinationProvinceId && b.isActive,
+            orElse: () => Battle(
+              provinceId: '',
+              attackerTag: '',
+              defenderTag: '',
+              attackerArmy: 0,
+              defenderArmy: 0,
+              isActive: false,
+            ),
+          );
+          
+          // If there's an active battle in the destination province
+          if (existingBattle.isActive) {
+            print("Reinforcing ongoing battle in ${targetProvince.name} with ${movement.armySize} troops from ${nation.nationTag}");
+            
+            // Don't modify the province armies directly - we'll update the battle instead
+            // Mark the origin province for clearing only if we don't already have a change
+            if (!provinceArmyChanges.containsKey(movement.originProvinceId)) {
+              final originProvince = provinces.firstWhere((p) => p.id == movement.originProvinceId);
+              final remainingArmies = originProvince.armies.where((a) => a.nationTag != nation.nationTag).toList();
+              provinceArmyChanges[movement.originProvinceId] = remainingArmies;
+            }
+            continue;
+          }
+          
+          // Skip movements that will lead to new battles - we handle those in battle processing
           if (isHostileMove && targetProvince.armies.isNotEmpty) {
             continue;
           }
@@ -546,16 +594,72 @@ class Game {
       }
       return province;
     }).toList();
-
+    
     // Collect all battles that will start
     final allNewBattles = <Battle>[];
+    
+    // First, process reinforcements for existing battles
+    final updatedExistingBattles = battles.where((b) => b.isActive).map((battle) {
+      int additionalAttackerTroops = 0;
+      int additionalDefenderTroops = 0;
+      
+      // Check for movements that are reinforcing this battle
+      for (final nation in nations) {
+        for (final movement in nation.movements.where((m) => m.daysLeft <= 1)) {
+          if (movement.destinationProvinceId == battle.provinceId) {
+            // This movement is headed to a province with an active battle
+            if (nation.nationTag == battle.attackerTag) {
+              // Reinforcing attacker
+              additionalAttackerTroops += movement.armySize;
+              print("Reinforcing attacker in ${battle.provinceId} with ${movement.armySize} troops from ${nation.nationTag}");
+            } else if (nation.nationTag == battle.defenderTag) {
+              // Reinforcing defender
+              additionalDefenderTroops += movement.armySize;
+              print("Reinforcing defender in ${battle.provinceId} with ${movement.armySize} troops from ${nation.nationTag}");
+            }
+            // Other nations wouldn't logically reinforce a battle they're not part of
+          }
+        }
+      }
+      
+      // Only update the battle if there are reinforcements
+      if (additionalAttackerTroops > 0 || additionalDefenderTroops > 0) {
+        return battle.copyWith(
+          attackerArmy: battle.attackerArmy + additionalAttackerTroops,
+          defenderArmy: battle.defenderArmy + additionalDefenderTroops
+        );
+      }
+      
+      return battle;
+    }).toList();
+    
+    // Now collect new battles that will start
     for (final nation in nations) {
       for (final movement in nation.movements.where((m) => m.daysLeft <= 1)) {
         final targetProvince = provinces.firstWhere((p) => p.id == movement.destinationProvinceId);
         final isHostileMove = nation.atWarWith.contains(targetProvince.owner);
         
+        // Check if there's already an active battle in this province
+        final existingBattle = updatedExistingBattles.firstWhere(
+          (b) => b.provinceId == movement.destinationProvinceId,
+          orElse: () => Battle(
+            provinceId: '',
+            attackerTag: '',
+            defenderTag: '',
+            attackerArmy: 0,
+            defenderArmy: 0,
+            isActive: false,
+          ),
+        );
+        
+        // Skip if there's already a battle being processed for this province
+        if (existingBattle.isActive) {
+          continue;
+        }
+        
+        // Check if this movement needs to create a new battle
         if (isHostileMove && targetProvince.armies.isNotEmpty) {
-          final existingBattle = allNewBattles.firstWhere(
+          final existingNewBattle = allNewBattles.firstWhere(
             (b) => b.provinceId == movement.destinationProvinceId,
             orElse: () => Battle(
               provinceId: movement.destinationProvinceId,
@@ -567,14 +671,15 @@ class Game {
             ),
           );
           
-          if (!allNewBattles.contains(existingBattle)) {
-            allNewBattles.add(existingBattle);
+          if (!allNewBattles.contains(existingNewBattle)) {
+            allNewBattles.add(existingNewBattle);
           }
         }
       }
     }
     
     print("Updated provinces with armies: ${updatedProvinces.where((p) => p.armies.isNotEmpty).length}");
+    print("Existing battles updated: ${updatedExistingBattles.length}");
     print("New battles: ${allNewBattles.length}");
     print("=== END PROCESSING MOVEMENTS ===\n");
 
@@ -586,7 +691,7 @@ class Game {
       playerNationTag: playerNationTag,
       nations: updatedNations,
       provinces: updatedProvinces,
-      battles: [...battles.where((b) => b.isActive), ...allNewBattles],
+      battles: [...updatedExistingBattles, ...allNewBattles],
     );
   }
 
@@ -623,11 +728,94 @@ class Game {
       print('Defender Casualties: ${battle.defenderCasualties}');
 
       // Simulate battle tick - each side loses troops
-      final newAttackerArmy = max(0, battle.attackerArmy - 5000);
-      final newDefenderArmy = max(0, battle.defenderArmy - 4000); // Defender has a slight advantage
+      final newAttackerArmy = max(0, battle.attackerArmy - 3500);
+      final newDefenderArmy = max(0, battle.defenderArmy - 2800);
       
-      final newAttackerCasualties = battle.attackerCasualties + (battle.attackerArmy - newAttackerArmy);
-      final newDefenderCasualties = battle.defenderCasualties + (battle.defenderArmy - newDefenderArmy);
+      final attackerLosses = battle.attackerArmy - newAttackerArmy;
+      final defenderLosses = battle.defenderArmy - newDefenderArmy;
+      
+      final newAttackerCasualties = battle.attackerCasualties + attackerLosses;
+      final newDefenderCasualties = battle.defenderCasualties + defenderLosses;
+
+      // Calculate population losses (30% of casualties)
+      final attackerPopLoss = (attackerLosses * 0.3).round();
+      final defenderPopLoss = (defenderLosses * 0.3).round();
+      
+      // Update attacker nation's population
+      final attackerIndex = updatedNations.indexWhere((n) => n.nationTag == battle.attackerTag);
+      if (attackerIndex != -1) {
+        final attackerNation = updatedNations[attackerIndex];
+        if (attackerPopLoss > 0 && attackerNation.nationProvinces.isNotEmpty) {
+          // Distribute population loss across provinces randomly
+          final provinceCount = attackerNation.nationProvinces.length;
+          final rng = Random();
+          
+          // Calculate population loss per province (might be uneven)
+          final lossPerProvince = attackerPopLoss ~/ provinceCount;
+          var remainingLoss = attackerPopLoss;
+          
+          for (final provinceId in attackerNation.nationProvinces) {
+            final provinceIndex = updatedProvinces.indexWhere((p) => p.id == provinceId);
+            if (provinceIndex != -1 && remainingLoss > 0) {
+              final province = updatedProvinces[provinceIndex];
+              // Apply a slightly randomized loss to add variability
+              final actualLoss = min(
+                remainingLoss,
+                min(
+                  province.population,
+                  lossPerProvince + rng.nextInt(lossPerProvince ~/ 2) - (lossPerProvince ~/ 4)
+                )
+              );
+              
+              if (actualLoss > 0) {
+                updatedProvinces[provinceIndex] = province.copyWith(
+                  population: max(1000, province.population - actualLoss),
+                );
+                remainingLoss -= actualLoss;
+                print('Attacker province ${province.name} lost ${actualLoss} population');
+              }
+            }
+          }
+        }
+      }
+      
+      // Update defender nation's population
+      final defenderIndex = updatedNations.indexWhere((n) => n.nationTag == battle.defenderTag);
+      if (defenderIndex != -1) {
+        final defenderNation = updatedNations[defenderIndex];
+        if (defenderPopLoss > 0 && defenderNation.nationProvinces.isNotEmpty) {
+          // Distribute population loss across provinces randomly
+          final provinceCount = defenderNation.nationProvinces.length;
+          final rng = Random();
+          
+          // Calculate population loss per province (might be uneven)
+          final lossPerProvince = defenderPopLoss ~/ provinceCount;
+          var remainingLoss = defenderPopLoss;
+          
+          for (final provinceId in defenderNation.nationProvinces) {
+            final provinceIndex = updatedProvinces.indexWhere((p) => p.id == provinceId);
+            if (provinceIndex != -1 && remainingLoss > 0) {
+              final province = updatedProvinces[provinceIndex];
+              // Apply a slightly randomized loss to add variability
+              final actualLoss = min(
+                remainingLoss,
+                min(
+                  province.population,
+                  lossPerProvince + rng.nextInt(lossPerProvince ~/ 2) - (lossPerProvince ~/ 4)
+                )
+              );
+              
+              if (actualLoss > 0) {
+                updatedProvinces[provinceIndex] = province.copyWith(
+                  population: max(1000, province.population - actualLoss),
+                );
+                remainingLoss -= actualLoss;
+                print('Defender province ${province.name} lost ${actualLoss} population');
+              }
+            }
+          }
+        }
+      }
 
       // Check if battle is over
       final isBattleOver = newAttackerArmy == 0 || newDefenderArmy == 0;
@@ -747,7 +935,7 @@ class Game {
       updatedBattles.add(updatedBattle);
     }
 
-    print("Battles remaining active: ${updatedBattles.count((b) => b.isActive)}");
+    print("Battles remaining active: ${updatedBattles.where((b) => b.isActive).length}");
     print("=== END PROCESSING BATTLES ===\n");
     
     return Game(

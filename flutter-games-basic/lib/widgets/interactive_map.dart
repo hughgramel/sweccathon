@@ -731,10 +731,16 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
 
   // Add this new function
   void _triggerRepaint() {
+    print('Forcing map repaint...');
     if (mounted) {
+      var currentSelectedRegion = selectedRegion;
       setState(() {
         // This will force the MapPainter to repaint
         selectedRegion = selectedRegion == null ? Region(id: '', path: '') : null;
+      });
+      setState(() {
+        // This will force the MapPainter to repaint
+        rerenderVariable++;
       });
     }
   }
@@ -743,15 +749,72 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
   void didUpdateWidget(InteractiveMap oldWidget) {
     print('=== InteractiveMap didUpdateWidget ===');
     super.didUpdateWidget(oldWidget);
-    print('Game ID changed: ${oldWidget.game.id != widget.game.id}');
-    print('Player nation changed: ${oldWidget.game.playerNationTag != widget.game.playerNationTag}');
-    print('Province count changed: ${oldWidget.game.provinces.length != widget.game.provinces.length}');
     
-    // Check if provinces or movements have changed
+    // Check if provinces, movements, or battles have changed
     final oldMovementCount = oldWidget.game.nations.fold<int>(0, (count, nation) => count + nation.movements.length);
     final newMovementCount = widget.game.nations.fold<int>(0, (count, nation) => count + nation.movements.length);
     
+    final oldBattleCount = oldWidget.game.battles.length;
+    final oldActiveBattleCount = oldWidget.game.battles.where((b) => b.isActive).length;
+    
+    final newBattleCount = widget.game.battles.length;
+    final newActiveBattleCount = widget.game.battles.where((b) => b.isActive).length;
+    
     print('Movement count: $oldMovementCount -> $newMovementCount');
+    print('Battle count: $oldBattleCount -> $newBattleCount');
+    print('Active battle count: $oldActiveBattleCount -> $newActiveBattleCount');
+    
+    // Check if battles have changed (created, completed, or updated)
+    bool battleChanged = false;
+    
+    // New battle created
+    if (newBattleCount > oldBattleCount) {
+      print('\n=== New battles created ===');
+      battleChanged = true;
+    }
+    
+    // Battle completed
+    if (oldActiveBattleCount > newActiveBattleCount) {
+      print('\n=== Battles completed ===');
+      battleChanged = true;
+    }
+    
+    // Battle updated (same number of active battles, but battles have progressed)
+    if (oldActiveBattleCount == newActiveBattleCount && oldActiveBattleCount > 0) {
+      // Check if any battle casualties changed
+      bool casualtiesChanged = false;
+      
+      for (final oldBattle in oldWidget.game.battles.where((b) => b.isActive)) {
+        final newBattle = widget.game.battles.firstWhere(
+          (b) => b.provinceId == oldBattle.provinceId && b.isActive,
+          orElse: () => Battle(
+            provinceId: '',
+            attackerTag: '',
+            defenderTag: '',
+            attackerArmy: 0,
+            defenderArmy: 0,
+            isActive: false,
+          ),
+        );
+        
+        if (newBattle.provinceId.isNotEmpty &&
+            (oldBattle.attackerArmy != newBattle.attackerArmy ||
+             oldBattle.defenderArmy != newBattle.defenderArmy ||
+             oldBattle.attackerCasualties != newBattle.attackerCasualties ||
+             oldBattle.defenderCasualties != newBattle.defenderCasualties)) {
+          casualtiesChanged = true;
+          print('\n=== Battle casualties changed ===');
+          print('Province: ${newBattle.provinceId}');
+          print('Attacker: ${oldBattle.attackerArmy} -> ${newBattle.attackerArmy}');
+          print('Defender: ${oldBattle.defenderArmy} -> ${newBattle.defenderArmy}');
+          break;
+        }
+      }
+      
+      if (casualtiesChanged) {
+        battleChanged = true;
+      }
+    }
     
     // Check provinces with armies
     final provincesWithArmies = widget.game.provinces.where((p) => p.armies.isNotEmpty).toList();
@@ -763,7 +826,36 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       }
     }
     
-    // Check if date changed
+    // Check for active battles
+    if (widget.game.battles.any((b) => b.isActive)) {
+      print('\n=== Active Battles ===');
+      for (final battle in widget.game.battles.where((b) => b.isActive)) {
+        final province = widget.game.provinces.firstWhere(
+          (p) => p.id == battle.provinceId,
+          orElse: () => Province(
+            id: '',
+            name: '',
+            path: '',
+            population: 0,
+            goldIncome: 0,
+            industry: 0,
+            buildings: [],
+            resourceType: ResourceType.none,
+            armies: [],
+            owner: '',
+            borderingProvinces: [],
+          ),
+        );
+        
+        print('Battle in ${province.name}:');
+        print('  Attacker: ${battle.attackerTag} (${battle.attackerArmy} troops)');
+        print('  Defender: ${battle.defenderTag} (${battle.defenderArmy} troops)');
+        print('  Casualties: ${battle.attackerCasualties} attackers, ${battle.defenderCasualties} defenders');
+      }
+      print('=== End Active Battles ===\n');
+    }
+    
+    // Check if date changed or if movements have completed
     if (oldWidget.game.date != widget.game.date) {
       print('\n=== Movement Status for ${widget.game.date} ===');
       
@@ -798,9 +890,73 @@ class _InteractiveMapState extends State<InteractiveMap> with SingleTickerProvid
       
       print('\nActive movements: $activeMovements');
       print('=== End Movement Status ===\n');
+      
+      // Check for movements that just completed
+      final completedMovements = <String>[];
+      
+      // Check for movements that were about to complete in the previous state
+      for (final nation in oldWidget.game.nations) {
+        final completingMovements = nation.movements.where((m) => m.daysLeft <= 1).toList();
+        for (final movement in completingMovements) {
+          // Check if this movement is no longer in the current state
+          final currentNation = widget.game.nations.firstWhere(
+            (n) => n.nationTag == nation.nationTag,
+            orElse: () => Nation(
+              nationTag: '',
+              name: '',
+              color: '',
+              hexColor: '',
+              nationProvinces: [],
+              allies: [],
+              borderProvinces: [],
+              gold: 0,
+              researchPoints: 0,
+              currentResearchId: null,
+              currentResearchProgress: 0,
+              buildQueue: null,
+              isAI: false,
+              movements: [],
+              atWarWith: [],
+              armyReserve: 0,
+            ),
+          );
+          
+          final movementStillExists = currentNation.movements.any(
+            (m) => m.originProvinceId == movement.originProvinceId && 
+                   m.destinationProvinceId == movement.destinationProvinceId
+          );
+          
+          if (!movementStillExists) {
+            print('Detected completed movement to ${movement.destinationProvinceId}');
+            completedMovements.add(movement.destinationProvinceId);
+          }
+        }
+      }
+      
+      // If there are any completed movements, trigger a repaint
+      if (completedMovements.isNotEmpty) {
+        print('\n=== Handling Completed Movements ===');
+        print('Completed destinations: ${completedMovements.join(", ")}');
+        print('Triggering repaint for completed movements');
+        _triggerRepaint();
+        print('=== Completed Movements Handled ===\n');
+      }
+    } else if (oldMovementCount > newMovementCount) {
+      // Movement count decreased without a date change, which likely means battles finished
+      print('\n=== Movement count decreased without date change ===');
+      print('Likely battle completion or manual cancellation');
+      print('Triggering repaint');
+      _triggerRepaint();
+      print('=== Repaint triggered ===\n');
     }
     
-    print('=== InteractiveMap didUpdateWidget Complete ===');
+    // If battles have changed, trigger a repaint
+    if (battleChanged) {
+      print('\n=== Battle changes detected ===');
+      print('Triggering repaint to update battle visualizations');
+      _triggerRepaint();
+      print('=== Battle repaint triggered ===\n');
+    }
   }
 
   @override
@@ -1898,7 +2054,7 @@ class MapPainter extends CustomPainter {
           ? defenderArmyInK.toStringAsFixed(1)
           : defenderArmyInK.floor().toString();
 
-      final battleText = '$attackerNumber ⚔️ $defenderNumber';
+      final battleText = '$attackerNumber⚔️$defenderNumber';
       
       final textPainter = _cachedTextPainters[regionId] ?? TextPainter(
         text: TextSpan(
@@ -1907,7 +2063,7 @@ class MapPainter extends CustomPainter {
             color: Colors.white,
             fontSize: fontSize,
             fontWeight: FontWeight.w600,
-            letterSpacing: -fontSize * 0.14,
+            letterSpacing: -fontSize * 0.05, // Reduced negative letter spacing
           ),
         ),
         textDirection: TextDirection.ltr,

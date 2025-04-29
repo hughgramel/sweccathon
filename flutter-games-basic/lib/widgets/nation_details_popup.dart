@@ -58,6 +58,175 @@ class NationDetailsPopup extends StatelessWidget {
     return (isNegative ? "-" : "") + formatted + suffixes[suffixIndex];
   }
 
+  void _showWarStatistics(BuildContext context) {
+    // Calculate war casualties and deaths
+    int attackerCasualties = 0;
+    int defenderCasualties = 0;
+    
+    // Find battles between player and this nation
+    for (final battle in game.battles) {
+      if ((battle.attackerTag == playerNation.nationTag && battle.defenderTag == nation.nationTag) ||
+          (battle.attackerTag == nation.nationTag && battle.defenderTag == playerNation.nationTag)) {
+        
+        if (battle.attackerTag == playerNation.nationTag) {
+          attackerCasualties += battle.attackerCasualties;
+          defenderCasualties += battle.defenderCasualties;
+        } else {
+          attackerCasualties += battle.defenderCasualties;
+          defenderCasualties += battle.attackerCasualties;
+        }
+      }
+    }
+    
+    final attackerDeaths = (attackerCasualties * 0.3).round();
+    final defenderDeaths = (defenderCasualties * 0.3).round();
+    
+    // Create the overlay entry
+    late final OverlayEntry overlay;
+    
+    // Show war statistics in a styled container similar to the nation details popup
+    overlay = OverlayEntry(
+      builder: (context) => Material(
+        color: Colors.transparent,
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            width: MediaQuery.of(context).size.width * 0.8,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => overlay.remove(),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: const Icon(
+                          Icons.close,
+                          size: 20,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // War info section
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'War with ${nation.name}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    // Stats section
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Your Nation',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _StatItem(
+                                emoji: '⚔️',
+                                label: 'Casualties',
+                                value: _formatNumber(attackerCasualties),
+                              ),
+                              const SizedBox(height: 8),
+                              _StatItem(
+                                emoji: '💀',
+                                label: 'Deaths',
+                                value: _formatNumber(attackerDeaths),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                nation.name,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _StatItem(
+                                emoji: '⚔️',
+                                label: 'Casualties',
+                                value: _formatNumber(defenderCasualties),
+                              ),
+                              const SizedBox(height: 8),
+                              _StatItem(
+                                emoji: '💀',
+                                label: 'Deaths',
+                                value: _formatNumber(defenderDeaths),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Action button
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              label: 'Close',
+                              color: const Color(0xFF67B9E7),
+                              shadowColor: const Color(0xFF4792BA),
+                              onTap: () => overlay.remove(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    // Add to overlay
+    Overlay.of(context).insert(overlay);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAtWar = playerNation.atWarWith.contains(nation.nationTag);
@@ -192,7 +361,7 @@ class NationDetailsPopup extends StatelessWidget {
                           onTap: onDeclareWar,
                         ),
                       ),
-                    if (isAtWar)
+                    if (isAtWar) ...[
                       Expanded(
                         child: _ActionButton(
                           label: 'Make Peace',
@@ -201,6 +370,16 @@ class NationDetailsPopup extends StatelessWidget {
                           onTap: onMakePeace,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _ActionButton(
+                          label: 'View War',
+                          color: const Color(0xFFE57373),
+                          shadowColor: const Color(0xFFC62828),
+                          onTap: () => _showWarStatistics(context),
+                        ),
+                      ),
+                    ],
                     if (!isAtWar && !isAllied)
                       Expanded(
                         child: _ActionButton(
@@ -287,7 +466,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
       transform: Matrix4.translationValues(0, -2, 0),
       decoration: BoxDecoration(
         color: color,
@@ -307,7 +486,7 @@ class _ActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             child: Text(
               label,
               textAlign: TextAlign.center,
